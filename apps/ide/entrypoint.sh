@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# TODO: Add starter file syncing
+# Use the aws cli + a env var pointing to the download
+
 : "${PROJECT_ID:?PROJECT_ID is required}"
 
 EFS_TARGET="/mnt/efs/$PROJECT_ID"
@@ -10,9 +13,7 @@ mkdir -p "$EFS_TARGET"
 chown -R 6767:6767 "$EFS_TARGET"
 
 # remove any existing dirs
-if [ -d "$WORKSPACE_LINK" ] && [ ! -L "$WORKSPACE_LINK" ]; then
-    rm -rf "$WORKSPACE_LINK"
-fi
+rm -rf "$WORKSPACE_LINK"
 
 # symlink
 ln -s "$EFS_TARGET" "$WORKSPACE_LINK"

@@ -1,0 +1,45 @@
+services:
+  ide:
+    build: 
+      context: ./apps/ide
+    image: ide
+  environment:
+    build:
+      context: ./containers/environments/${ENVIRONMENT:-python}
+      additional_contexts:
+        ide: service:ide
+    environment:
+      - PROJECT_ID=development-project
+    volumes:
+      - efs-mount:/mnt/efs/
+  reverse-proxy:
+    build:
+      context: ./containers/reverse-proxy
+    environment:
+      - SESSION_SECRET=${PASSWORD:-password}
+    ports:
+      - 8080:80
+  watchdog:
+    build:
+      context: ./containers/watchdog
+    environment:
+      - PROJECT_ID=development-project
+      - MAX_SESSION_SECONDS=${MAX_SESSION_SECONDS:-3600}
+      - MAX_SIZE_MB=${MAX_SIZE_MB:-2000}
+    volumes:
+      - efs-mount:/mnt/efs/
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8000:8080
+volumes:
+  pgdata:
+  efs-mount:

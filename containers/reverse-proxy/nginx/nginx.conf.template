@@ -8,6 +8,16 @@ server {
             return 401;
         }
 
-        # TODO: Add proxy pass 
+        # TODO: Change this to localhost:3000 in production
+        proxy_pass http://environment:3000;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Accept-Encoding gzip;
+        proxy_read_timeout 86400;
+
+        proxy_buffering off;
     }
 }
