@@ -175,7 +175,11 @@ export class IDEStack extends cdk.Stack {
 				},
 			);
 
-			taskDefinition.addContainer(env, {
+			taskDefinition.addVolume({
+                name: "student-workspace-volume"
+            });
+
+			const envContainer = taskDefinition.addContainer(env, {
 				image: envImage,
 				containerName: env,
 				essential: true,
@@ -186,7 +190,13 @@ export class IDEStack extends cdk.Stack {
 				],
 			});
 
-			taskDefinition.addContainer("watchdog", {
+			envContainer.addMountPoints({
+                containerPath: "/workspace", // The path your IDE uses internally
+                sourceVolume: "student-workspace-volume",
+                readOnly: false,
+            });
+
+			const watchDogContainer = taskDefinition.addContainer("watchdog", {
 				image: watchDogImage,
 				containerName: "watchdog",
 				essential: false,
@@ -194,6 +204,11 @@ export class IDEStack extends cdk.Stack {
 					streamPrefix: "watchdog",
 				}),
 			});
+			watchDogContainer.addMountPoints({
+                containerPath: "/workspace",
+                sourceVolume: "student-workspace-volume",
+                readOnly: false,
+            });
 
 			taskDefinition.addContainer("reverse-proxy", {
 				image: reverseProxyImage,
