@@ -34,6 +34,20 @@ RUN yarn config set network-timeout 600000 -g && \
 # Production stage uses a small base image
 FROM node:24-bookworm-slim AS production-stage
 
+# system deps + utils
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    zip \
+    unzip \
+    git \
+    build-essential \
+    jq \
+    nano \
+    tar \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # create a system + group user, where the home is /home/project
 RUN adduser --system --group --uid 6767 --home /home/project theia
 
@@ -52,7 +66,6 @@ EXPOSE 3000
 ENV SHELL=/bin/bash \
     THEIA_DEFAULT_PLUGINS=local-dir:/opt/theia/plugins \
     USE_LOCAL_GIT=true 
-
 
 WORKDIR /
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]

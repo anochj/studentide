@@ -10,8 +10,10 @@ services:
         ide: service:ide
     environment:
       - PROJECT_ID=development-project
+      - STARTER_ZIP_URL=${STARTER_ZIP_URL:-}
     volumes:
-      - efs-mount:/mnt/efs/
+      # - efs-mount:/mnt/efs/
+      - ./.mnt/efs/:/mnt/efs/
   reverse-proxy:
     build:
       context: ./containers/reverse-proxy
@@ -27,19 +29,44 @@ services:
       - MAX_SESSION_SECONDS=${MAX_SESSION_SECONDS:-3600}
       - MAX_SIZE_MB=${MAX_SIZE_MB:-2000}
     volumes:
-      - efs-mount:/mnt/efs/
+      # - efs-mount:/mnt/efs/
+      - ./.mnt/efs/:/mnt/efs/
   postgres:
     image: postgres
     restart: always
     environment:
       POSTGRES_PASSWORD: password
     volumes:
-      - pgdata:/var/lib/postgresql/data 
+      - pgdata:/var/lib/postgresql
   adminer:
     image: adminer
     restart: always
     ports:
       - 8000:8080
+  minio:
+    image: minio/minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set local http://minio:9000 admin password123;
+      mc mb local/student-assignments-bucket || true;
+      exit 0;
+      "
 volumes:
   pgdata:
   efs-mount:
+  minio_data:

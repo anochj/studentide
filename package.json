@@ -16,7 +16,7 @@
     "lint": "turbo run lint",
     "format": "biome format \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "infra:up": "docker-compose -f docker-compose.dev.yml up --build --abort-on-container-exit",
+    "infra:up": "docker-compose -f docker-compose.dev.yml up --build",
     "infra:down": "docker-compose -f docker-compose.dev.yml down",
     "infra:clean": "docker-compose -f docker-compose.dev.yml down -v"
   },

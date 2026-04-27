@@ -6,7 +6,7 @@ set -e
 : "${MAX_SIZE_MB:?MAX_SIZE_MB is required}"
 
 # Configuration
-CHECK_INTERVAL=5
+CHECK_INTERVAL=60
 EFS_MOUNT="/mnt/efs/$PROJECT_ID"
 
 echo "Watchdog started for $PROJECT_ID"
