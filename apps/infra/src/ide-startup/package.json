@@ -1,0 +1,12 @@
+{
+  "name": "ide-startup",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@aws-sdk/client-ec2": "^3.1037.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
