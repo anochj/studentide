@@ -251,17 +251,31 @@ export class IDEStack extends cdk.Stack {
 			}),
 		);
 
-		const ideStartUpLambda = new nodejs.NodejsFunction(this, "IdeStartupFunction", {
-			runtime: lambda.Runtime.NODEJS_LATEST,
-			entry: path.join(__dirname, "../src/ide-startup/index.ts"),
-			description: "Lambda function to start up IDE environment on ECS. Registers to CF.",
-			environment: {
-				// TODO: Add cf credentials
-			}
-		});
+		const ideStartUpLambda = new nodejs.NodejsFunction(
+			this,
+			"IdeStartupFunction",
+			{
+				runtime: lambda.Runtime.NODEJS_LATEST,
+				entry: path.join(__dirname, "../src/ide-startup/index.ts"),
+				description:
+					"Lambda function to start up IDE environment on ECS. Registers to CF.",
+				environment: {
+					// TODO: Add cf credentials
+				},
+			},
+		);
 
-		new events.Rule(this, "TaskCleanupHook", {
-			description: "EventBridge rule to trigger start up lambda when ECS tasks starts running.",
+		ideStartUpLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ["ec2:DescribeNetworkInterfaces"],
+				resources: ["*"],
+			}),
+		);
+
+		new events.Rule(this, "IDEStartUp", {
+			description:
+				"EventBridge rule to trigger start up lambda when ECS tasks starts running.",
 			eventPattern: {
 				detailType: ["ECS Task State Change"],
 				source: ["aws.ecs"],
