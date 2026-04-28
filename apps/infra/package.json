@@ -5,6 +5,7 @@
     "infra": "bin/infra.js"
   },
   "scripts": {
+    "deploy": "cdk deploy --require-approval never",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
@@ -13,15 +14,18 @@
   "devDependencies": {
     "@types/jest": "^30",
     "@types/node": "^24.10.1",
+    "aws-cdk": "2.1118.2",
+    "dotenv": "^17.4.2",
+    "esbuild": "^0.28.0",
     "jest": "^30",
     "ts-jest": "^29",
-    "aws-cdk": "2.1118.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.248.0",
-    "constructs": "^10.5.0"
+    "constructs": "^10.5.0",
+    "ide": "workspace:*"
   },
   "description": "This is a blank project for CDK development with TypeScript.",
   "main": "jest.config.js",

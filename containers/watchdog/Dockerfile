@@ -1,4 +1,6 @@
-FROM alpine:latest
+ARG TARGETPLATFORM=linux/arm64
+
+FROM --platform=$TARGETPLATFORM alpine:latest
 
 COPY ./entrypoint.sh /entrypoint.sh
 

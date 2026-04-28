@@ -1,4 +1,6 @@
-FROM ide:latest
+ARG TARGETPLATFORM=linux/arm64
+
+FROM --platform=$TARGETPLATFORM ide:latest
 
 USER root
 

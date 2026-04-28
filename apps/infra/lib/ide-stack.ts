@@ -9,11 +9,17 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as events from "aws-cdk-lib/aws-events";
 import * as eventsTargets from "aws-cdk-lib/aws-events-targets";
+import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const ProjectRoot = __dirname + "/../../../..";
+const projectRoot = path.resolve(__dirname, "../../..");
+const ideContainerPlatform = ecrAssets.Platform.LINUX_ARM64;
+const ideRuntimePlatform = {
+	operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+	cpuArchitecture: ecs.CpuArchitecture.ARM64,
+};
 export class IDEStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
@@ -141,24 +147,29 @@ export class IDEStack extends cdk.Stack {
 			}),
 		);
 
-		const containersRoot = `${ProjectRoot}/containers`;
+		const containersRoot = path.join(projectRoot, "containers");
+		const environmentsRoot = path.join(containersRoot, "environments");
 		const reverseProxyImage = ecs.ContainerImage.fromAsset(
-			`${containersRoot}/reverse-proxy`,
+			path.join(containersRoot, "reverse-proxy"),
+			{ platform: ideContainerPlatform },
 		);
 		const watchDogImage = ecs.ContainerImage.fromAsset(
-			`${containersRoot}/watchdog`,
+			path.join(containersRoot, "watchdog"),
+			{ platform: ideContainerPlatform },
 		);
 
-		const environmentDir = fs.readdirSync(`${containersRoot}/environments`);
+		const environmentDir = fs.readdirSync(environmentsRoot);
 		for (const env of environmentDir) {
-			const envPath = path.join(`${containersRoot}/environments`, env);
+			const envPath = path.join(environmentsRoot, env);
 
 			// ignore not dirs
 			if (!fs.statSync(envPath).isDirectory()) {
 				continue;
 			}
 
-			const envImage = ecs.ContainerImage.fromAsset(envPath);
+			const envImage = ecs.ContainerImage.fromAsset(envPath, {
+				platform: ideContainerPlatform,
+			});
 
 			const taskDefinition = new ecs.FargateTaskDefinition(
 				this,
@@ -166,22 +177,19 @@ export class IDEStack extends cdk.Stack {
 				{
 					cpu: 1024,
 					memoryLimitMiB: 2048,
-					runtimePlatform: {
-						operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-						cpuArchitecture: ecs.CpuArchitecture.ARM64,
-					},
+					runtimePlatform: ideRuntimePlatform,
 					executionRole: environmentExecutionRole,
 					taskRole: environmentTaskRole,
 				},
 			);
 
 			taskDefinition.addVolume({
-                name: "student-workspace-volume"
-            });
+				name: "student-workspace-volume",
+			});
 
-			const envContainer = taskDefinition.addContainer(env, {
+			const envContainer = taskDefinition.addContainer("environment", {
 				image: envImage,
-				containerName: env,
+				containerName: "environment",
 				essential: true,
 				portMappings: [
 					{
@@ -191,10 +199,10 @@ export class IDEStack extends cdk.Stack {
 			});
 
 			envContainer.addMountPoints({
-                containerPath: "/workspace", // The path your IDE uses internally
-                sourceVolume: "student-workspace-volume",
-                readOnly: false,
-            });
+				containerPath: "/mnt/efs", // The path your IDE uses internally
+				sourceVolume: "student-workspace-volume",
+				readOnly: false,
+			});
 
 			const watchDogContainer = taskDefinition.addContainer("watchdog", {
 				image: watchDogImage,
@@ -205,10 +213,10 @@ export class IDEStack extends cdk.Stack {
 				}),
 			});
 			watchDogContainer.addMountPoints({
-                containerPath: "/workspace",
-                sourceVolume: "student-workspace-volume",
-                readOnly: false,
-            });
+				containerPath: "/mnt/efs",
+				sourceVolume: "student-workspace-volume",
+				readOnly: false,
+			});
 
 			taskDefinition.addContainer("reverse-proxy", {
 				image: reverseProxyImage,
@@ -275,7 +283,8 @@ export class IDEStack extends cdk.Stack {
 				description:
 					"Lambda function to start up IDE environment on ECS. Registers to CF.",
 				environment: {
-					// TODO: Add cf credentials
+					CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID!,
+					CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN!,
 				},
 			},
 		);
@@ -300,6 +309,59 @@ export class IDEStack extends cdk.Stack {
 				},
 			},
 			targets: [new eventsTargets.LambdaFunction(ideStartUpLambda)],
+		});
+
+		const ideShutDownLambda = new nodejs.NodejsFunction(
+			this,
+			"IdeShutdownFunction",
+			{
+				runtime: lambda.Runtime.NODEJS_LATEST,
+				entry: path.join(__dirname, "../src/ide-shutdown/index.ts"),
+				description:
+					"Lambda function to shut down IDE environment on ECS. Deregisters from CF.",
+				environment: {
+					CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID!,
+					CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN!,
+				},
+			},
+		);
+
+		ideShutDownLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ["ec2:DescribeNetworkInterfaces"],
+				resources: ["*"],
+			}),
+		);
+
+		new events.Rule(this, "IDEShutDown", {
+			description:
+				"EventBridge rule to trigger shut down lambda when ECS tasks starts running.",
+			eventPattern: {
+				detailType: ["ECS Task State Change"],
+				source: ["aws.ecs"],
+				detail: {
+					lastStatus: ["STOPPED"],
+					clusterArn: [ideCluster.clusterArn],
+				},
+			},
+			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
+		});
+
+		new cdk.CfnOutput(this, "EfsFileSystemId", {
+			value: ideEfs.fileSystemId,
+		});
+
+		new cdk.CfnOutput(this, "EcsClusterName", {
+			value: ideCluster.clusterName,
+		});
+
+		new cdk.CfnOutput(this, "EcsSubnets", {
+			value: ideVpc.publicSubnets.map((s) => s.subnetId).join(","),
+		});
+
+		new cdk.CfnOutput(this, "EcsSecurityGroup", {
+			value: ideSg.securityGroupId,
 		});
 	}
 

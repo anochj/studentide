@@ -1,5 +1,7 @@
+ARG TARGETPLATFORM=linux/arm64
+
 # Builder stage - default layers provided by Theia
-FROM node:24-bookworm AS build-stage
+FROM --platform=$TARGETPLATFORM node:24-bookworm AS build-stage
 
 RUN apt-get update && apt-get install -y libxkbfile-dev libsecret-1-dev
 
@@ -32,7 +34,7 @@ RUN yarn config set network-timeout 600000 -g && \
 
 
 # Production stage uses a small base image
-FROM node:24-bookworm-slim AS production-stage
+FROM --platform=$TARGETPLATFORM node:24-bookworm-slim AS production-stage
 
 # system deps + utils
 RUN apt-get update && apt-get install -y --no-install-recommends \

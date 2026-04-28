@@ -4,12 +4,12 @@ server {
 
     location / {
         # TODO: Add auth with the env variable
-        if ($cookie_sessionSecret != "password") {
+        if ($cookie_sessionSecret != "${SESSION_SECRET}") {
             return 401;
         }
 
         # TODO: Change this to localhost:3000 in production
-        proxy_pass http://environment:3000;
+        proxy_pass http://${UPSTREAM_TARGET};
 
         proxy_http_version 1.1;
         proxy_set_header Host $host;
