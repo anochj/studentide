@@ -206,6 +206,8 @@ interface FileUploadProps
   disabled?: boolean;
   invalid?: boolean;
   multiple?: boolean;
+  webkitdirectory?: boolean;
+  directory?: boolean;
   required?: boolean;
 }
 
@@ -229,6 +231,8 @@ function FileUpload(props: FileUploadProps) {
     disabled = false,
     invalid = false,
     multiple = false,
+    webkitdirectory = false,
+    directory = false,
     required = false,
     children,
     className,
@@ -664,6 +668,9 @@ function FileUpload(props: FileUploadProps) {
             multiple={multiple}
             required={required}
             onChange={onInputChange}
+            // @ts-expect-error - This is valid
+            webkitdirectory={webkitdirectory.toString()}
+            directory={directory.toString()}
           />
           <div id={labelId} className="sr-only">
             {label ?? "File upload"}

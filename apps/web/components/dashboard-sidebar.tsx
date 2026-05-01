@@ -33,8 +33,8 @@ type DashboardNavItem = {
 
 const dashboardNavItems: DashboardNavItem[] = [
 	{
-		title: "Projects",
-		href: "/projects",
+		title: "Project Definitions",
+		href: "/project-definitions",
 		icon: FolderKanban,
 	},
 	{

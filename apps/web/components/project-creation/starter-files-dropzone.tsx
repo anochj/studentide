@@ -1,245 +1,255 @@
 import {
-	Dropzone,
-	DropZoneArea,
-	DropzoneDescription,
-	DropzoneMessage,
-	DropzoneTrigger,
-	useDropzone,
-} from "../ui/dropzone";
-import ignore from "ignore";
+	FileUpload,
+	FileUploadDropzone,
+	FileUploadTrigger,
+	FileUploadList,
+	FileUploadItem,
+	FileUploadItemPreview,
+	FileUploadItemMetadata,
+	FileUploadItemProgress,
+	FileUploadItemDelete,
+	FileUploadClear,
+} from "@/components/ui/file-upload";
+import { Folder, Upload, X } from "lucide-react";
+import { Button } from "../ui/button";
 import JSZip from "jszip";
-import { CloudUploadIcon, FolderArchiveIcon, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
+import ignore from "ignore";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter } from "../ui/card";
+import { Progress } from "@/components/ui/progress";
 
-type StarterFolderUploadResult =
-	| {
-			status: "success";
-			result?: unknown;
-	  }
-	| {
-			status: "error";
-			error: string;
-	  };
+const DEFAULT_FILE_IGNORES = [
+	// Version Control
+	".git/",
 
-export interface StarterFileDropzoneProps {
-	title?: string;
-	description?: string;
-	accept?: Record<string, string[]>;
-	maxSize?: number;
-	maxFiles?: number;
-	onStarterFolderUpload: (file: File) => Promise<StarterFolderUploadResult>;
-	onClearAll?: () => void; // Pass a function to clear the state if needed
-}
+	// OS Files
+	".DS_Store",
+	"Thumbs.db",
+	"desktop.ini",
 
-const DEFAULT_IGNORE_PATTERNS = [".git", ".git/**", "**/.git", "**/.git/**"];
+	// Dependencies
+	"node_modules/",
+	"bower_components/",
+	"jspm_packages/",
 
-const getRootFolderName = (files: File[]) => {
-	const firstFile = files[0] as File & { webkitRelativePath?: string };
-	return firstFile?.webkitRelativePath?.split("/")[0] || "starter-folder";
-};
+	// Environments & Secrets
+	".env",
+	".env.*",
+	"*.env",
+	".venv/",
+	"venv/",
+	"env/",
+	"ENV/",
 
-const getFilePath = (file: File, rootFolderName: string) => {
-	const fileWithPath = file as File & { webkitRelativePath?: string };
-	const path = (fileWithPath.webkitRelativePath || file.name).replaceAll(
-		"\\",
-		"/",
-	);
-	const pathParts = path.split("/").filter(Boolean);
+	// Python Cache
+	"__pycache__/",
+	"*.py[cod]",
+	"*$py.class",
+	".pytest_cache/",
 
-	if (pathParts[0] === rootFolderName) {
-		return pathParts.slice(1).join("/");
-	}
+	// Build Outputs & IDEs
+	"dist/",
+	"build/",
+	"out/",
+	"target/", // Java/Rust
+	".vscode/",
+	".idea/",
+	"*.suo",
+	"*.ntvs*",
+	"*.njsproj",
+	"*.sln",
 
-	return pathParts.join("/");
-};
+	// Logs & Temporary
+	"*.log",
+	"*.tmp",
+	"*.swp",
+	".cache/",
+	".sass-cache/",
+	"npm-debug.log*",
+	"yarn-debug.log*",
+	"yarn-error.log*",
+];
 
-const getDirectoryPath = (filePath: string) => {
-	const pathParts = filePath.split("/");
-	pathParts.pop();
-	return pathParts.join("/");
-};
-
-const getScopedPath = (filePath: string, directoryPath: string) => {
-	if (directoryPath.length === 0) {
-		return filePath;
-	}
-
-	if (filePath === directoryPath) {
-		return "";
-	}
-
-	return filePath.startsWith(`${directoryPath}/`)
-		? filePath.slice(directoryPath.length + 1)
-		: undefined;
-};
-
-const createStarterFolderZip = async (files: File[]) => {
-	const rootFolderName = getRootFolderName(files);
-	const gitignoreMatchers = await Promise.all(
-		files
-			.map((file) => ({
-				file,
-				path: getFilePath(file, rootFolderName),
-			}))
-			.filter(
-				({ path }) => path === ".gitignore" || path.endsWith("/.gitignore"),
-			)
-			.map(async ({ file, path }) => ({
-				directoryPath: getDirectoryPath(path),
-				matcher: ignore().add(await file.text()),
-			})),
-	);
-	const defaultMatcher = ignore().add(DEFAULT_IGNORE_PATTERNS);
-
-	const isIgnored = (filePath: string) =>
-		defaultMatcher.ignores(filePath) ||
-		gitignoreMatchers.some(({ directoryPath, matcher }) => {
-			const scopedPath = getScopedPath(filePath, directoryPath);
-			return scopedPath !== undefined && matcher.ignores(scopedPath);
-		});
-
-	const zip = new JSZip();
-
-	for (const file of files) {
-		const filePath = getFilePath(file, rootFolderName);
-
-		if (filePath.length === 0 || isIgnored(filePath)) {
-			continue;
-		}
-		console.log(`Adding file to zip: ${filePath}`);
-
-		zip.file(filePath, file);
-	}
-
-	const zipBlob = await zip.generateAsync({
-		type: "blob",
-		compression: "DEFLATE",
-		compressionOptions: { level: 6 },
-	});
-
-	return new File([zipBlob], `${rootFolderName}.zip`, {
-		type: "application/zip",
-		lastModified: Date.now(),
-	});
-};
-
-export function StarterFileDropzone({
-	title = "Upload Starter Folder",
-	description = "The starter folder is automatically loaded into the IDE when the project is created.",
-	accept,
-	maxSize = 50 * 1024 * 1024, // Default to 50MB for folders
-	maxFiles = 1000, // Higher limit for directories
-	onStarterFolderUpload,
-	onClearAll,
-}: StarterFileDropzoneProps) {
-	const dropzone = useDropzone<unknown, string>({
-		onDropFiles: async (files) => {
-			try {
-				const zipFile = await createStarterFolderZip(files);
-				const result = await onStarterFolderUpload(zipFile);
-
-				if (result.status === "error") {
-					return result;
-				}
-
-				return {
-					status: "success",
-					result: result.result,
-				};
-			} catch (error) {
-				return {
-					status: "error",
-					error:
-						error instanceof Error
-							? error.message
-							: "Failed to create starter folder zip",
-				};
-			}
+type StarterFilesDropzoneProps = {
+	initStarterFolder?: Blob | null;
+	initStarterName?: string | null;
+	overviewMdMatches?: string[];
+	onFolderUpload?: (
+		folder: {
+			blob: Blob;
+			name: string;
 		},
-		directoryMode: true,
-		validation: {
-			accept,
-			maxSize,
-			maxFiles,
+		events: {
+			onProgress: (progress: number) => void;
+			onSuccess: (result?: any) => void;
+			onError: (error: Error) => void;
 		},
-	});
+	) => void;
+	onFolderRemove?: () => void;
+	onOverviewMDDetected?: (content: string) => void;
+};
 
-	// Compute a single summary for the entire uploaded folder
-	const folderSummary = useMemo(() => {
-		if (dropzone.fileStatuses.length === 0) return null;
-
-		const totalSize = dropzone.fileStatuses.reduce(
-			(acc, curr) => acc + curr.file.size,
-			0,
-		);
-		const fileCount = dropzone.fileStatuses.length;
-
-		// Extract root folder name from webkitRelativePath
-		const firstFile = dropzone.fileStatuses[0]?.file as File & {
-			webkitRelativePath?: string;
-		};
-		const folderName =
-			firstFile?.webkitRelativePath?.split("/")[0] || "Uploaded Folder";
-
-		const isUploading = dropzone.fileStatuses.some(
-			(f) => f.status === "pending",
-		);
-
-		return { totalSize, fileCount, folderName, isUploading };
-	}, [dropzone.fileStatuses]);
+export default function StarterFilesDropzone({
+	initStarterFolder,
+	initStarterName,
+	overviewMdMatches = ["overview.md", "readme.md"],
+	onFolderUpload,
+	onFolderRemove,
+	onOverviewMDDetected,
+}: StarterFilesDropzoneProps) {
+	const [starterFolder, setStarterFolder] = useState<Blob | null>(
+		initStarterFolder || null,
+	);
+	const [folderName, setFolderName] = useState<string | null>(
+		initStarterName || null,
+	);
+	const [uploadProgress, setUploadProgress] = useState(0);
 
 	return (
-		<div className="not-prose flex flex-col gap-4">
-			<Dropzone {...dropzone}>
-				<div className="">
-					<div className="flex justify-between">
-						<DropzoneDescription>{description}</DropzoneDescription>
-						<DropzoneMessage />
-					</div>
-					<DropZoneArea className="p-0 border-dashed">
-						<DropzoneTrigger className="flex flex-col items-center gap-4 bg-transparent p-10 text-center text-sm w-full">
-							<CloudUploadIcon className="size-8" />
-							<div>
-								<p className="font-semibold">{title}</p>
-								<p className="text-sm text-muted-foreground">
-									Click here or drag and drop to upload
-								</p>
-							</div>
-						</DropzoneTrigger>
-					</DropZoneArea>
-				</div>
+		<FileUpload
+			onUpload={async (files) => {
+				const zip = new JSZip();
+				const gitignore = ignore().add(DEFAULT_FILE_IGNORES);
+				let overviewFound = false;
 
-				{/* Replaced individual file mapping with a unified folder summary */}
-				{folderSummary && (
-					<div className="mt-2 flex items-center justify-between overflow-hidden rounded-md bg-secondary p-4 shadow-sm border border-border">
-						<div className="flex items-center gap-4 min-w-0">
-							<FolderArchiveIcon className="size-8 shrink-0 text-blue-500" />
-							<div className="min-w-0">
-								<p className="truncate text-sm font-medium flex items-center gap-2">
-									{folderSummary.folderName}
-									{folderSummary.isUploading && (
-										<span className="animate-pulse text-xs font-normal text-blue-500">
-											Uploading...
-										</span>
-									)}
-								</p>
-								<p className="text-xs text-muted-foreground">
-									{folderSummary.fileCount} files •{" "}
-									{(folderSummary.totalSize / (1024 * 1024)).toFixed(2)} MB
-									total
-								</p>
-							</div>
-						</div>
-						<button
-							type="button"
-							onClick={onClearAll}
-							className="shrink-0 rounded-md p-2 hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
-						>
-							<Trash2Icon className="size-4" />
-						</button>
+				const folderName = files[0].webkitRelativePath.split("/")[0];
+
+				const subdirGitignores = files
+					.filter((file) => file.webkitRelativePath.endsWith(".gitignore"))
+					.map(async (file) => {
+						const parentDir = file.webkitRelativePath.replace(
+							/\/?[^\/]*\.gitignore$/,
+							"/",
+						);
+						const content = await file.text();
+						const subIgnore = ignore().add(content);
+
+						return {
+							parentDir,
+							subIgnore,
+						};
+					});
+				const resolvedSubdirGitignores = await Promise.all(subdirGitignores);
+
+				files.forEach((file, i) => {
+					const fullPath = file.webkitRelativePath || file.name;
+
+					const normalizedPath = fullPath.startsWith("/")
+						? fullPath.substring(1)
+						: fullPath;
+
+					const pathParts = normalizedPath.split("/");
+					const pathRelativeToRoot = pathParts.slice(1).join("/");
+
+					const checkPath = pathRelativeToRoot || normalizedPath;
+
+					if (gitignore.ignores(checkPath)) {
+						return;
+					}
+
+					const ignoreThis = resolvedSubdirGitignores.some(
+						({ parentDir, subIgnore }) => {
+							if (fullPath.startsWith(parentDir)) {
+								const relativeToSub = fullPath.substring(parentDir.length);
+								return subIgnore.ignores(relativeToSub);
+							}
+							return false;
+						},
+					);
+
+					if (ignoreThis) return;
+
+					const isOveriewMD =
+						pathParts.at(-1)?.toLowerCase() &&
+						overviewMdMatches.includes(pathParts.at(-1)!.toLowerCase());
+
+					if (isOveriewMD && onOverviewMDDetected && !overviewFound) {
+						overviewFound = true;
+
+						file.text()?.then((content) => {
+							onOverviewMDDetected(content);
+						});
+					}
+
+					zip.file(fullPath, file);
+				});
+
+				const starterFolder = await zip.generateAsync({
+					type: "blob",
+					compression: "DEFLATE",
+					compressionOptions: {
+						level: 6,
+					},
+				});
+
+				setStarterFolder(starterFolder);
+				setFolderName(folderName);
+
+				// TODO: Add success and error handling
+				if (onFolderUpload) {
+					onFolderUpload({
+						blob: starterFolder,
+						name: folderName || "starter_files.zip",
+					}, {
+						onProgress: (progress) => setUploadProgress(progress),
+						// TODO: Implement
+						onSuccess: () => {},
+						onError: () => {},
+					});
+				}
+			}}
+			className="w-full max-w-full"
+			multiple
+			webkitdirectory
+			directory
+		>
+			<FileUploadDropzone className="w-full">
+				<div className="flex flex-col items-center gap-1">
+					<div className="flex items-center justify-center rounded-full border p-2.5">
+						<Upload className="size-6 text-muted-foreground" />
 					</div>
+					<p className="font-medium text-sm">Drag & drop folder here</p>
+					<p className="text-muted-foreground text-xs">
+						Or click to browse (max 1 root folder)
+					</p>
+				</div>
+				<FileUploadTrigger asChild>
+					<Button variant="outline" size="sm" className="mt-2 w-fit">
+						Browse folders
+					</Button>
+				</FileUploadTrigger>
+			</FileUploadDropzone>
+			<div>
+				{starterFolder && (
+					<Card className="w-full p-0">
+						<CardContent className="flex justify-between py-2 pl-4 pr-2">
+							<div className="flex items-center gap-2 w-full">
+								<Folder size={20} />
+								{folderName} ({(starterFolder.size / (1024 * 1024)).toFixed(2)}{" "}
+								MB)
+								<Progress value={uploadProgress} className="max-w-32 ml-4" />
+							</div>
+
+							<div>
+								<Button
+									variant="secondary"
+									size="icon"
+									type="button"
+									onClick={() => {
+										setStarterFolder(null);
+										setFolderName(null);
+										if (onFolderRemove) {
+											onFolderRemove();
+										}
+									}}
+								>
+									<X className="size-3" />
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
 				)}
-			</Dropzone>
-		</div>
+			</div>
+		</FileUpload>
 	);
 }

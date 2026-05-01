@@ -1,54 +1,85 @@
 export * from "./auth-schema";
 
 import {
-	integer,
-	serial,
-	uuid,
-	pgTable,
-	text,
-	timestamp,
+    integer,
+    serial,
+    uuid,
+    pgTable,
+    text,
+    timestamp,
+    pgEnum,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
 export const environments = pgTable("environments", {
-	id: serial("id").primaryKey(),
-	name: text("name").notNull(),
-	description: text("description").notNull(),
-	icon: text("icon").notNull(),
-	task_definition_arn: text("task_definition_arn").notNull().unique(),
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    icon: text("icon").notNull(),
+    task_definition_arn: text("task_definition_arn").notNull().unique(),
 });
 
+export const objectStatus = pgEnum("object_status", ["pending", "active", "deleted"]);
+
+export const starterFolders = pgTable("starter_folders", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // FIXED: Changed uuid to text to match auth-schema
+    user_id: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    size: integer("size").notNull(),
+    path: text("path").notNull(),
+    status: objectStatus("status").notNull().default("pending"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+    deleted_at: timestamp("deleted_at"),
+});
+
+export const projectAccess = pgEnum("project_access", ["private", "public", "link"]);
+export const projectAvailability = pgEnum("project_availability", ["open", "custom"]);
+
 export const projects = pgTable("projects", {
-	id: uuid("id").primaryKey(),
-	slug: text("slug").notNull().unique(),
-	name: text("name").notNull(),
-	description: text("description"),
-	starter_file_url: text("starter_file_url"),
-	overview: text("overview"),
-	user_id: integer("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
-	environment_id: integer("environment_id")
-		.notNull()
-		.references(() => environments.id),
-	created_at: timestamp("created_at").defaultNow().notNull(),
-	updated_at: timestamp("updated_at").defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    // FIXED: Changed uuid to text to match auth-schema
+    user_id: text("user_id")
+        .notNull()
+        .references(() => user.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    overview: text("overview"),
+    starter_folder_id: uuid("starter_folder_id").references( // Also fixed the column name here
+        () => starterFolders.id,
+        {
+            onDelete: "set null",
+        },
+    ),
+    environment_id: integer("environment_id")
+        .notNull()
+        .references(() => environments.id),
+    access: projectAccess("access").notNull().default("private"),
+    availability: projectAvailability("availability").notNull().default("open"),
+    availability_opens: timestamp("availability_opens"),
+    availability_closes: timestamp("availability_closes"),
+
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const ideSessions = pgTable("ide_sessions", {
-	id: uuid("id").primaryKey(),
-	user_id: integer("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
-	project_id: integer("project_id").references(() => projects.id, {
-		onDelete: "cascade",
-	}),
-	memory: integer("memory").notNull(),
-	cpu: integer("cpu").notNull(),
-	identifier: text("identifier").notNull(),
-	task_definition_arn: text("task_definition_arn").notNull(),
-	// TODO: maybe or maybe not store end time
-	// status: text("status").notNull().default("provisioning"),
-	started_at: timestamp("started_at").defaultNow().notNull(),
-	// ended_at: timestamp("ended_at"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    // FIXED: Changed uuid to text to match auth-schema
+    user_id: text("user_id")
+        .notNull()
+        .references(() => user.id, { onDelete: "cascade" }),
+    project_id: uuid("project_id").references(() => projects.id, {
+        onDelete: "cascade",
+    }),
+    memory: integer("memory").notNull(),
+    cpu: integer("cpu").notNull(),
+    identifier: text("identifier").notNull(),
+    task_definition_arn: text("task_definition_arn").notNull(),
+    // TODO: maybe or maybe not store end time
+    // status: text("status").notNull().default("provisioning"),
+    started_at: timestamp("started_at").defaultNow().notNull(),
+    // ended_at: timestamp("ended_at"),
 });
