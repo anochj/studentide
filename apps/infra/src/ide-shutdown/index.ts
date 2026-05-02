@@ -1,10 +1,3 @@
-import {
-    EC2Client,
-    DescribeNetworkInterfacesCommand,
-} from "@aws-sdk/client-ec2";
-
-const ec2 = new EC2Client({});
-
 type EventBridgeECSTaskEvent = {
     id: string;
     detail: {

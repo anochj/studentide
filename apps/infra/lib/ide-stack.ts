@@ -334,6 +334,47 @@ export class IDEStack extends cdk.Stack {
 			}),
 		);
 
+		const webhookConnection = new events.Connection(this, "IdeStatusWebhook", {
+			authorization: events.Authorization.apiKey(
+				"x-webhook-secret", // The header name your REST endpoint expects
+				cdk.SecretValue.unsafePlainText(process.env.AWS_EVENT_BRIDGE_SECRET!),
+			),
+			description: "Connection to external REST API",
+		});
+
+		const apiDestination = new events.ApiDestination(
+			this,
+			"IdeStatusWebhookDestination",
+			{
+				connection: webhookConnection,
+				endpoint: process.env.IDE_STATUS_WEBHOOK_URL!,
+				httpMethod: events.HttpMethod.POST,
+				rateLimitPerSecond: 10,
+			},
+		);
+
+		new events.Rule(this, "IDEStartUp", {
+			description:
+				"EventBridge rule to trigger REST endpoint when ECS tasks starts running.",
+			eventPattern: {
+				detailType: ["ECS Task State Change"],
+				source: ["aws.ecs"],
+				detail: {
+					lastStatus: ["RUNNING", "STOPPED"],
+					clusterArn: [ideCluster.clusterArn],
+				},
+			},
+			targets: [
+				new eventsTargets.ApiDestination(apiDestination, {
+					event: events.RuleTargetInput.fromObject({
+						cluster: events.EventField.fromPath("$.detail.clusterArn"),
+						taskArn: events.EventField.fromPath("$.detail.taskArn"),
+						status: events.EventField.fromPath("$.detail.lastStatus"),
+					}),
+				}),
+			],
+		});
+
 		new events.Rule(this, "IDEShutDown", {
 			description:
 				"EventBridge rule to trigger shut down lambda when ECS tasks starts running.",
