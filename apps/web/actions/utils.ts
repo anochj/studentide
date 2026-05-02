@@ -19,8 +19,8 @@ export function getS3Client() {
 		endpoint: process.env.AWS_S3_ENDPOINT ?? "http://localhost:9000",
 		forcePathStyle: process.env.NODE_ENV === "development",
 		credentials: {
-			accessKeyId: getRequiredEnv("AWS_ACCESS_KEY_ID"),
-			secretAccessKey: getRequiredEnv("AWS_SECRET_ACCESS_KEY"),
+			accessKeyId: getRequiredEnv("AWS_S3_ACCESS_KEY_ID"),
+			secretAccessKey: getRequiredEnv("AWS_S3_SECRET_ACCESS_KEY"),
 		},
 	});
 }

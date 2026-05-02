@@ -16,15 +16,15 @@ type Plan = {
 export const PLAN_LIMITS: Record<string, Limits> = {
     free: {
         maxActiveIDESessions: 1,
-        maxIDESessionStorage: 2,
-        maxIDESessionLength: 2,
-        maxProjects: 2,
+        maxIDESessionStorage: 10,
+        maxIDESessionLength: 4,
+        maxProjects: 10,
     },
     plus_subscription: {
         maxActiveIDESessions: 3,
-        maxIDESessionStorage: 10,
-        maxIDESessionLength: 6,
-        maxProjects: 5,
+        maxIDESessionStorage: 20,
+        maxIDESessionLength: 12,
+        maxProjects: 100, // Basically infinity
     }
 }
 

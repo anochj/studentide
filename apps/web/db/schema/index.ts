@@ -1,16 +1,17 @@
 export * from "./auth-schema";
 
 import {
+	boolean,
 	integer,
-	serial,
-	uuid,
+	pgEnum,
 	pgTable,
+	serial,
 	text,
 	timestamp,
-	pgEnum,
-	boolean,
+	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
+import { task } from "better-auth/react";
 
 export const environments = pgTable("environments", {
 	id: serial("id").primaryKey(),
@@ -95,8 +96,11 @@ export const ideSessions = pgTable("ide_sessions", {
 	project_id: uuid("project_id").references(() => projects.id, {
 		onDelete: "cascade",
 	}),
+	memory: integer("memory").notNull(),
+	cpu: integer("cpu").notNull(),
 	identifier: text("identifier").notNull(),
 	task_definition_arn: text("task_definition_arn").notNull(),
+    task_arn: text("task_arn").unique(),
 	status: ideSessionStatus("status").notNull().default("provisioning"),
 	started_at: timestamp("started_at").defaultNow().notNull(),
 	ended_at: timestamp("ended_at"),
