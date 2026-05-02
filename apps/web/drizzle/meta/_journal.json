@@ -15,6 +15,13 @@
       "when": 1777267473756,
       "tag": "0001_uneven_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777676193069,
+      "tag": "0002_even_triton",
+      "breakpoints": true
     }
   ]
 }

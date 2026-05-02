@@ -5,14 +5,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-	createProjectDefinition,
-	deregisterStarterFolder,
-	getStarterFolderUploadSignedUrl,
+  createProjectDefinition,
+  deregisterStarterFolder,
+  getStarterFolderUploadSignedUrl,
 } from "@/actions";
 import {
-	type Project,
-	type ProjectInput,
-	projectSchema,
+  type Project,
+  type ProjectInput,
+  projectSchema,
 } from "@/lib/validations/project";
 import { MarkdownEditor } from "./markdown-editor";
 import AccessSelector from "./project-creation/access-selector";
@@ -24,200 +24,238 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 
+type ActionErrorResult = {
+  serverError?: string;
+  validationErrors?: {
+    formErrors: string[];
+    fieldErrors: Record<string, string[] | undefined>;
+  };
+};
+
+function getActionError(result: ActionErrorResult) {
+  if (result.serverError) return result.serverError;
+
+  if (result.validationErrors) {
+    const fieldErrors = Object.values(
+      result.validationErrors.fieldErrors,
+    ).flat();
+    const messages = [
+      ...result.validationErrors.formErrors,
+      ...fieldErrors,
+    ].filter((message): message is string => Boolean(message));
+
+    if (messages.length > 0) return messages.join(", ");
+  }
+
+  return "Action failed";
+}
+
 export function ProjectCreationForm() {
-	const {
-		register,
-		handleSubmit,
-		setValue,
-		getValues,
-		control,
-		formState: { errors },
-	} = useForm<ProjectInput, unknown, Project>({
-		resolver: zodResolver(projectSchema),
-		defaultValues: {
-			name: "",
-			description: "",
-			environment_id: "",
-			access: "private",
-			starter_folder_id: "",
-			availability: "open",
-			availability_closes: undefined,
-			availability_opens: undefined,
-			overview: "",
-		},
-	});
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    control,
+    formState: { errors },
+  } = useForm<ProjectInput, unknown, Project>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      environment_id: "",
+      access: "private",
+      starter_folder_id: "",
+      availability: "open",
+      availability_closes: undefined,
+      availability_opens: undefined,
+      overview: "",
+    },
+  });
 
-	const handleOverviewMDDetected = useCallback(
-		(content: string) => {
-			setValue("overview", content, { shouldValidate: true });
-		},
-		[setValue],
-	);
+  const handleOverviewMDDetected = useCallback(
+    (content: string) => {
+      setValue("overview", content, { shouldValidate: true });
+    },
+    [setValue],
+  );
 
-	useEffect(() => {
-		if (Object.keys(errors).length > 0) {
-			console.log("Form Errors:", errors);
-		}
-	}, [errors]);
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("Form Errors:", errors);
+    }
+  }, [errors]);
 
-	const uploadStarterFolder = useMutation({
-		mutationFn: async (file: { blob: Blob; name: string }) => {
-			const signedUrlRes = await getStarterFolderUploadSignedUrl(
-				file.name,
-				file.blob.size,
-			);
-			if (!signedUrlRes.success) throw new Error(signedUrlRes.error);
-			const { url, id } = signedUrlRes;
-			if (!url || !id) throw new Error("Malformed response from server.");
+  const uploadStarterFolder = useMutation({
+    mutationFn: async (file: { blob: Blob; name: string }) => {
+      const signedUrlRes = await getStarterFolderUploadSignedUrl({
+        fileName: file.name,
+        fileSize: file.blob.size,
+      });
+      if (signedUrlRes.serverError || signedUrlRes.validationErrors) {
+        throw new Error(getActionError(signedUrlRes));
+      }
 
-			const response = await fetch(url, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/zip",
-				},
-				body: file.blob,
-			});
+      if (!signedUrlRes.data) {
+        throw new Error("Malformed response from server.");
+      }
 
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(
-					`Upload failed: ${response.status} ${response.statusText} - ${errorText}`,
-				);
-			}
+      const { url, id } = signedUrlRes.data;
+      if (!url || !id) throw new Error("Malformed response from server.");
 
-			return id;
-		},
-		onSuccess: (data) => {
-			console.log("Upload successful:", data);
-		},
-	});
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/zip",
+        },
+        body: file.blob,
+      });
 
-	const removeStarterFolder = useMutation({
-		mutationFn: async () => {
-			const currentStarterFolderId = getValues("starter_folder_id");
-			if (!currentStarterFolderId) {
-				throw new Error("No starter folder to remove.");
-			}
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Upload failed: ${response.status} ${response.statusText} - ${errorText}`,
+        );
+      }
 
-			const signedUrlRes = await deregisterStarterFolder(
-				currentStarterFolderId,
-			);
-			if (!signedUrlRes.success) throw new Error(signedUrlRes.error);
-		},
-		onSuccess: (data) => {
-			console.log("Upload successful:", data);
-		},
-	});
+      return id;
+    },
+    onSuccess: (data) => {
+      console.log("Upload successful:", data);
+    },
+  });
 
-	const uploadProjectDefinition = useMutation({
-		mutationFn: async (data: Project) => {
-			const { success, error } = await createProjectDefinition(data);
-			if (!success) throw new Error(`Project creation failed: ${error}`);
-			return true;
-		},
-		onSuccess: (data) => {
-			console.log("Project created successfully:", data);
-		},
-	});
+  const removeStarterFolder = useMutation({
+    mutationFn: async () => {
+      const currentStarterFolderId = getValues("starter_folder_id");
+      if (!currentStarterFolderId) {
+        throw new Error("No starter folder to remove.");
+      }
 
-	return (
-		<form
-			id="project-form"
-			className="grid grid-cols-2 gap-4 p-4"
-			onSubmit={handleSubmit((data) =>
-				uploadProjectDefinition.mutateAsync(data),
-			)}
-		>
-			<div className="flex flex-col gap-1">
-				<Input
-					id="projectName"
-					type="text"
-					placeholder="Project Name"
-					{...register("name")}
-				/>
-				{errors.name && (
-					<span className="text-red-500 text-sm">{errors.name.message}</span>
-				)}
-			</div>
+      const signedUrlRes = await deregisterStarterFolder({
+        id: currentStarterFolderId,
+      });
+      if (signedUrlRes.serverError || signedUrlRes.validationErrors) {
+        throw new Error(getActionError(signedUrlRes));
+      }
+    },
+    onSuccess: (data) => {
+      console.log("Upload successful:", data);
+    },
+  });
 
-			<Textarea
-				id="projectDescription"
-				placeholder="Project Description"
-				{...register("description")}
-			/>
+  const uploadProjectDefinition = useMutation({
+    mutationFn: async (data: Project) => {
+      const result = await createProjectDefinition(data);
+      if (result.serverError || result.validationErrors) {
+        throw new Error(`Project creation failed: ${getActionError(result)}`);
+      }
 
-			<Controller
-				name="environment_id"
-				control={control}
-				render={({ field }) => (
-					<EnvironmentSelector
-						onChange={field.onChange}
-						value={`${field.value}`}
-					/>
-				)}
-			/>
+      return true;
+    },
+    onSuccess: (data) => {
+      console.log("Project created successfully:", data);
+    },
+  });
 
-			<Controller
-				name="starter_folder_id"
-				control={control}
-				render={({ field }) => (
-					<StarterFileDropzone
-						onFolderUpload={async (
-							{ blob, name },
-							{ onProgress, onSuccess },
-						) => {
-							onProgress(0);
-							const referenceId = await uploadStarterFolder.mutateAsync({
-								blob,
-								name,
-							});
-							field.onChange(referenceId);
-							onProgress(100);
-							onSuccess();
-						}}
-						onFolderRemove={removeStarterFolder.mutateAsync}
-						onOverviewMDDetected={handleOverviewMDDetected}
-					/>
-				)}
-			/>
+  return (
+    <form
+      id="project-form"
+      className="grid grid-cols-2 gap-4 p-4"
+      onSubmit={handleSubmit((data) =>
+        uploadProjectDefinition.mutateAsync(data),
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        <Input
+          id="projectName"
+          type="text"
+          placeholder="Project Name"
+          {...register("name")}
+        />
+        {errors.name && (
+          <span className="text-red-500 text-sm">{errors.name.message}</span>
+        )}
+      </div>
 
-			<Controller
-				name="access"
-				control={control}
-				render={({ field }) => (
-					<AccessSelector onChange={field.onChange} value={field.value} />
-				)}
-			/>
+      <Textarea
+        id="projectDescription"
+        placeholder="Project Description"
+        {...register("description")}
+      />
 
-			<Controller
-				name="availability"
-				control={control}
-				render={({ field }) => (
-					<AvailabilitySelector
-						onChange={field.onChange}
-						onOpensAtChange={(date) => setValue("availability_opens", date)}
-						onClosesAtChange={(date) => setValue("availability_closes", date)}
-						value={field.value}
-					/>
-				)}
-			/>
+      <Controller
+        name="environment_id"
+        control={control}
+        render={({ field }) => (
+          <EnvironmentSelector
+            onChange={field.onChange}
+            value={`${field.value}`}
+          />
+        )}
+      />
 
-			<div className="col-span-2">
-				<Controller
-					name="overview"
-					control={control}
-					render={({ field }) => (
-						<MarkdownEditor
-							content={field.value}
-							onContentChange={field.onChange}
-						/>
-					)}
-				/>
-			</div>
+      <Controller
+        name="starter_folder_id"
+        control={control}
+        render={({ field }) => (
+          <StarterFileDropzone
+            onFolderUpload={async (
+              { blob, name },
+              { onProgress, onSuccess },
+            ) => {
+              onProgress(0);
+              const referenceId = await uploadStarterFolder.mutateAsync({
+                blob,
+                name,
+              });
+              field.onChange(referenceId);
+              onProgress(100);
+              onSuccess();
+            }}
+            onFolderRemove={removeStarterFolder.mutateAsync}
+            onOverviewMDDetected={handleOverviewMDDetected}
+          />
+        )}
+      />
 
-			<div className="col-span-2 flex justify-end mt-4">
-				<Button type="submit">Create Project</Button>
-			</div>
-		</form>
-	);
+      <Controller
+        name="access"
+        control={control}
+        render={({ field }) => (
+          <AccessSelector onChange={field.onChange} value={field.value} />
+        )}
+      />
+
+      <Controller
+        name="availability"
+        control={control}
+        render={({ field }) => (
+          <AvailabilitySelector
+            onChange={field.onChange}
+            onOpensAtChange={(date) => setValue("availability_opens", date)}
+            onClosesAtChange={(date) => setValue("availability_closes", date)}
+            value={field.value}
+          />
+        )}
+      />
+
+      <div className="col-span-2">
+        <Controller
+          name="overview"
+          control={control}
+          render={({ field }) => (
+            <MarkdownEditor
+              content={field.value}
+              onContentChange={field.onChange}
+            />
+          )}
+        />
+      </div>
+
+      <div className="col-span-2 flex justify-end mt-4">
+        <Button type="submit">Create Project</Button>
+      </div>
+    </form>
+  );
 }
