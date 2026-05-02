@@ -11,7 +11,6 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
-import { task } from "better-auth/react";
 
 export const environments = pgTable("environments", {
 	id: serial("id").primaryKey(),
@@ -100,8 +99,23 @@ export const ideSessions = pgTable("ide_sessions", {
 	cpu: integer("cpu").notNull(),
 	identifier: text("identifier").notNull(),
 	task_definition_arn: text("task_definition_arn").notNull(),
-    task_arn: text("task_arn").unique(),
+	task_arn: text("task_arn").unique(),
 	status: ideSessionStatus("status").notNull().default("provisioning"),
 	started_at: timestamp("started_at").defaultNow().notNull(),
 	ended_at: timestamp("ended_at"),
+});
+
+export const submissions = pgTable("submissions", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	project_id: uuid("project_id").references(() => projects.id, {
+		onDelete: "cascade",
+	}),
+	user_id: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+    ide_session_id: uuid("ide_session_id").references(() => ideSessions.id, {
+        onDelete: "set null",
+    }),
+    content_path: text("content_path").notNull(),
+    submitted_at: timestamp("submitted_at").defaultNow().notNull(), 
 });

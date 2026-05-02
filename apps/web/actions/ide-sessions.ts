@@ -7,12 +7,22 @@ import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { environments, ideSessions } from "@/db/schema";
+import {
+	getWorkspaceUsername,
+	type IdeSessionUser,
+	toWorkspaceSegment,
+} from "./ide-session-utils";
 import { getLaunchableProject } from "./project-definitions";
 import { authActionClient, getRequiredEnv, getUserSubscription } from "./utils";
 
-const projectIdSchema = z.object({
-	projectId: z.string().min(1),
-});
+const launchIDESessionSchema = z
+	.object({
+		projectId: z.string().min(1).optional(),
+		ideSessionId: z.string().uuid().optional(),
+	})
+	.refine((input) => input.projectId || input.ideSessionId, {
+		message: "A project ID or IDE session ID is required",
+	});
 
 async function getActiveIDESessionsForUser(userId: string) {
 	return db
@@ -29,28 +39,29 @@ async function getActiveIDESessionsForUser(userId: string) {
 		);
 }
 
-export const getActiveIDESessions = authActionClient.action(async ({ ctx }) => {
+export const getUserIDESessions = authActionClient.action(async ({ ctx }) => {
 	try {
-		const activeIDESessions = await getActiveIDESessionsForUser(
-			ctx.session.user.id,
-		);
+		const sessions = await db
+			.select()
+			.from(ideSessions)
+			.where(and(eq(ideSessions.user_id, ctx.session.user.id)));
 
-		return { success: true, sessions: activeIDESessions };
+		return { success: true, sessions };
 	} catch (err) {
 		console.log("Error fetching active IDE sessions:", err);
 		throw new Error("Failed to fetch active IDE sessions");
 	}
 });
 
-type User = {
-	id: string;
-	name: string;
-	username?: string | null;
+type ProvisionIdeSessionCommand = {
+	user: IdeSessionUser;
+	projectId: string;
 };
 
-type ProvisionIdeSessionCommand = {
-	user: User;
-	projectId: string;
+type RestartIdeSessionCommand = {
+	user: IdeSessionUser;
+	projectId?: string;
+	ideSessionId: string;
 };
 
 const ecsClient = new ecs.ECSClient();
@@ -97,24 +108,12 @@ function getIdeProvisioningConfig(): IdeProvisioningConfig {
 	};
 }
 
-function toWorkspaceSegment(value: string) {
-	return value
-		.toLowerCase()
-		.replace(/[^a-z0-9-]/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-|-$/g, "");
-}
-
-function getUsername(user: User) {
-	return toWorkspaceSegment(user.username || user.name || user.id) || user.id;
-}
-
 function buildIdeSessionIdentity({
 	user,
 	projectId,
 	projectSlug,
 }: ProvisionIdeSessionCommand & { projectSlug: string }): IdeSessionIdentity {
-	const username = getUsername(user);
+	const username = getWorkspaceUsername(user);
 	const projectSegment = toWorkspaceSegment(projectSlug) || projectId;
 
 	return {
@@ -181,6 +180,18 @@ async function markSessionActive(sessionId: string, taskArn: string) {
 		.where(eq(ideSessions.id, sessionId));
 }
 
+async function markSessionProvisioning(sessionId: string) {
+	await db
+		.update(ideSessions)
+		.set({
+			status: "provisioning",
+			task_arn: null,
+			started_at: new Date(),
+			ended_at: null,
+		})
+		.where(eq(ideSessions.id, sessionId));
+}
+
 async function createClientEFSAccessPoint(input: {
 	identity: IdeSessionIdentity;
 	fileSystemId: string;
@@ -190,6 +201,16 @@ async function createClientEFSAccessPoint(input: {
 			new efs.CreateAccessPointCommand({
 				ClientToken: input.identity.id,
 				FileSystemId: input.fileSystemId,
+				Tags: [
+					{
+						Key: "Name",
+						Value: input.identity.identifier.toLowerCase(),
+					},
+					{
+						Key: "IdeSessionId",
+						Value: input.identity.id,
+					},
+				],
 				PosixUser: {
 					Uid: 6767,
 					Gid: 6767,
@@ -398,8 +419,69 @@ async function provisionAwsIDESession({
 	await markSessionActive(identity.id, task.taskArn);
 }
 
+async function getRestartSessionRecord({
+	user,
+	projectId,
+	ideSessionId,
+}: RestartIdeSessionCommand) {
+	const [session] = await db
+		.select()
+		.from(ideSessions)
+		.where(
+			and(eq(ideSessions.id, ideSessionId), eq(ideSessions.user_id, user.id)),
+		);
+
+	if (!session) {
+		throw new Error("IDE session not found");
+	}
+
+	if (projectId && session.project_id !== projectId) {
+		throw new Error("IDE session not found for project");
+	}
+
+	if (!session.project_id) {
+		throw new Error("IDE session is missing a project");
+	}
+
+	if (session.status === "active" || session.status === "provisioning") {
+		throw new Error("IDE session is already running");
+	}
+
+	return {
+		...session,
+		project_id: session.project_id,
+	};
+}
+
+async function restartAwsIDESession(input: RestartIdeSessionCommand) {
+	const config = getIdeProvisioningConfig();
+	const session = await getRestartSessionRecord(input);
+	const identity: IdeSessionIdentity = {
+		id: session.id,
+		userId: input.user.id,
+		username: getWorkspaceUsername(input.user),
+		projectId: session.project_id,
+		identifier: session.identifier,
+	};
+
+	await markSessionProvisioning(session.id);
+
+	const runRes = await runSessionTask({
+		identity,
+		config,
+		taskDefinitionArn: session.task_definition_arn,
+		sessionSecret: randomBytes(32).toString("hex"),
+	});
+	const task = runRes.tasks?.[0];
+	if (!task || !task.taskArn) {
+		throw new Error("Failed to run session task");
+	}
+
+	await markSessionActive(session.id, task.taskArn);
+}
+
 export const launchIDESession = authActionClient
-	.inputSchema(projectIdSchema)
+	.inputSchema(launchIDESessionSchema)
 	.action(async ({ ctx, parsedInput }) => {
 		const activePlan = await getUserSubscription();
 		if (!activePlan?.limits) {
@@ -424,14 +506,28 @@ export const launchIDESession = authActionClient
 			);
 		}
 
-		await provisionAwsIDESession({
-			projectId: parsedInput.projectId,
-			user: {
-				id: ctx.session.user.id,
-				name: ctx.session.user.name,
-				username: ctx.session.user.username,
-			},
-		});
+		const user = {
+			id: ctx.session.user.id,
+			name: ctx.session.user.name,
+			username: ctx.session.user.username,
+		};
+
+		if (parsedInput.ideSessionId) {
+			await restartAwsIDESession({
+				ideSessionId: parsedInput.ideSessionId,
+				projectId: parsedInput.projectId,
+				user,
+			});
+		} else {
+			if (!parsedInput.projectId) {
+				throw new Error("A project ID is required to launch a new IDE session");
+			}
+
+			await provisionAwsIDESession({
+				projectId: parsedInput.projectId,
+				user,
+			});
+		}
 
 		return { success: true };
 	});
