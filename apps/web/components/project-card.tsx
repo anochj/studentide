@@ -1,17 +1,9 @@
 "use client";
 
+import { Code2, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "@/components/ui/card";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -23,14 +15,25 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Code2, Rocket, Pencil, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
-import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardFooter,
+	CardHeader,
+} from "@/components/ui/card";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteProjectDefinition } from "@/actions";
 
 type ProjectCardProps = {
 	id: string;
+	href?: string;
 	name: string;
 	description: string;
 	visibility: "public" | "private" | "link";
@@ -41,6 +44,7 @@ type ProjectCardProps = {
 
 export function ProjectCard({
 	id,
+	href,
 	name,
 	description,
 	visibility,
@@ -49,10 +53,28 @@ export function ProjectCard({
 	icon,
 }: ProjectCardProps) {
 	const [open, setOpen] = useState(false);
+	const queryClient = useQueryClient();
+
+	const deleteMutation = useMutation({
+		mutationFn: async () => {
+			return await deleteProjectDefinition({ id });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["project-definitions"] });
+		},
+	});
 
 	return (
-		<Card className="group flex flex-col justify-between transition-all hover:border-primary/50 hover:shadow-md cursor-pointer h-full">
-			<CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+		<Card className="group relative flex flex-col justify-between transition-all hover:border-primary/50 hover:shadow-md cursor-pointer h-full">
+			{href && (
+				<Link
+					href={href}
+					aria-label={`Open ${name}`}
+					className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+				/>
+			)}
+
+			<CardHeader className="pointer-events-none relative z-20 flex flex-row items-start justify-between space-y-0 pb-2">
 				<div className="flex items-center gap-3">
 					{icon ? (
 						<Image
@@ -90,7 +112,7 @@ export function ProjectCard({
 						<Button
 							variant="ghost"
 							size="icon"
-							className="-mr-2 -mt-2 h-8 w-8"
+							className="pointer-events-auto -mr-2 -mt-2 h-8 w-8"
 							onClick={(e) => {
 								e.preventDefault();
 								e.stopPropagation();
@@ -116,19 +138,31 @@ export function ProjectCard({
 								>
 									<Trash />
 									Delete Project
-								</Button>{" "}
+								</Button>
 							</AlertDialogTrigger>
 							<AlertDialogContent>
 								<AlertDialogHeader>
 									<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
 									<AlertDialogDescription>
 										This action cannot be undone. This will permanently delete
-										your account from our servers.
+										the project from our servers.
 									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction>Continue</AlertDialogAction>
+									<AlertDialogCancel className="cursor-pointer">
+										Cancel
+									</AlertDialogCancel>
+									<AlertDialogAction asChild>
+										<Button
+											variant="destructive"
+											className="bg-destructive hover:text-destructive hover:border-destructive hover:border cursor:pointer"
+											onClick={() => {
+												deleteMutation.mutate();
+											}}
+										>
+											Delete
+										</Button>
+									</AlertDialogAction>
 								</AlertDialogFooter>
 							</AlertDialogContent>
 						</AlertDialog>
@@ -141,13 +175,13 @@ export function ProjectCard({
 				</Popover>
 			</CardHeader>
 
-			<CardContent>
+			<CardContent className="pointer-events-none relative z-20">
 				<p className="line-clamp-2 text-sm text-muted-foreground">
 					{description}
 				</p>
 			</CardContent>
 
-			<CardFooter className="flex items-center justify-between border-t p-4 mt-auto">
+			<CardFooter className="pointer-events-none relative z-20 flex items-center justify-between border-t p-4 mt-auto">
 				<div className="flex items-center gap-2 text-xs text-muted-foreground">
 					<span className="font-medium">{environment_name}</span>
 					<span>•</span>
@@ -157,7 +191,10 @@ export function ProjectCard({
 				</div>
 
 				<Button variant="outline" size="sm" asChild>
-					<Link href={`/project-definitions/submissions/${id}`}>
+					<Link
+						href={`/project-definitions/submissions/${id}`}
+						className="pointer-events-auto"
+					>
 						View Submissions
 					</Link>
 				</Button>

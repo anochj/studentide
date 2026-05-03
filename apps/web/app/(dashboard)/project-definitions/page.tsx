@@ -1,10 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { getUserProjectDefinitions } from "@/actions";
-import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/project-card";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
-export default async function ProjectsPage() {
-	const result = await getUserProjectDefinitions();
+export default function ProjectsPage() {
+	const projectDefinitionsMutation = useQuery({
+		queryKey: ["project-definitions"],
+		queryFn: async () => {
+			return await getUserProjectDefinitions();
+		},
+	});
+	const result = projectDefinitionsMutation.data;
+	if (!result) return <h1>Loading...</h1>;
+
 	if (result.serverError || result.validationErrors || !result.data?.success) {
 		return (
 			<main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
@@ -23,21 +34,24 @@ export default async function ProjectsPage() {
 
 	return (
 		<main className="h-screen">
-			<h1 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
-				Project Definitions
-			</h1>
+			<div className="flex justify-between">
+				<h1 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+					Project Definitions
+				</h1>
+
+				<Button asChild variant="default" size="lg">
+					<Link href="/project-definitions/create">Create project</Link>
+				</Button>
+			</div>
 
 			<div className="h-full">
 				{projects.length > 0 ? (
 					<div className="flex gap-4">
 						{projects.map(({ environment, project }) => (
-							<Link
-								href={`/project-definitions/${project.slug}`}
-								key={project.id}
-								className="w-xs"
-							>
+							<div key={project.id} className="w-xs">
 								<ProjectCard
 									id={project.id}
+									href={`/project-definitions/${project.slug}`}
 									name={project.name}
 									description={
 										`${project.description} • ${environment.description}` ||
@@ -48,7 +62,7 @@ export default async function ProjectsPage() {
 									creation_date={project.created_at.toISOString()}
 									icon={environment.icon || "default"}
 								/>
-							</Link>
+							</div>
 						))}
 					</div>
 				) : (

@@ -27,12 +27,6 @@ import Image from "next/image";
 export default function CreateProjectPage() {
 	return (
 		<div className="w-full">
-			{/* <Button type="submit" form="project-form" variant="default">
-				Create Project
-			</Button>
-
-			<ProjectCreationForm /> */}
-
 			<div>
 				<h1 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
 					Create a Project Definition
