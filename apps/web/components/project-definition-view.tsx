@@ -14,6 +14,7 @@ type ProjectDefinitionViewProps = {
 		name: string;
 		description: string | null;
 		overview: string | null;
+		starter_folder_included?: boolean;
 		availability_opens: Date | null;
 		availability_closes: Date | null;
 	};
@@ -71,7 +72,10 @@ export default function ProjectDefinitionView({
 							size="lg"
 							className="h-12 w-full gap-2 text-base font-semibold"
 							onClick={async () => {
-								launchAction.execute({ projectId: project.id });
+								const res = await launchAction.executeAsync({
+									projectId: project.id,
+								});
+								console.log(res);
 							}}
 							disabled={launchAction.isExecuting}
 						>
@@ -164,7 +168,9 @@ export default function ProjectDefinitionView({
 										Starter Files
 									</p>
 									<p className="text-sm font-medium text-muted-foreground">
-										Included in workspace
+										{project.starter_folder_included
+											? "Included in workspace"
+											: "Not included in workspace"}
 									</p>
 								</div>
 							</div>

@@ -2,6 +2,7 @@ export * from "./auth-schema";
 
 import {
 	boolean,
+	index,
 	integer,
 	pgEnum,
 	pgTable,
@@ -9,8 +10,10 @@ import {
 	text,
 	timestamp,
 	uuid,
+	customType,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
+import { sql } from "drizzle-orm/sql/sql";
 
 export const environments = pgTable("environments", {
 	id: serial("id").primaryKey(),
@@ -38,6 +41,12 @@ export const starterFolders = pgTable("starter_folders", {
 	deleted_at: timestamp("deleted_at"),
 });
 
+const tsvector = customType<{ data: string }>({
+	dataType() {
+		return "tsvector";
+	},
+});
+
 export const projectAccess = pgEnum("project_access", [
 	"private",
 	"public",
@@ -47,38 +56,47 @@ export const projectAvailability = pgEnum("project_availability", [
 	"open",
 	"custom",
 ]);
-
-export const projects = pgTable("projects", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	user_id: text("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
-	slug: text("slug").notNull().unique(),
-	name: text("name").notNull(),
-	description: text("description"),
-	overview: text("overview"),
-	starter_folder_id: uuid("starter_folder_id").references(
-		// Also fixed the column name here
-		() => starterFolders.id,
-		{
-			onDelete: "set null",
-		},
-	),
-	environment_id: integer("environment_id")
-		.notNull()
-		.references(() => environments.id),
-	access: projectAccess("access").notNull().default("private"),
-	availability: projectAvailability("availability").notNull().default("open"),
-	availability_opens: timestamp("availability_opens"),
-	availability_closes: timestamp("availability_closes"),
-
-	extension_store_enabled: boolean("extension_store_enabled")
-		.notNull()
-		.default(true),
-
-	created_at: timestamp("created_at").defaultNow().notNull(),
-	updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
+export const projects = pgTable(
+	"projects",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		user_id: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		slug: text("slug").notNull().unique(),
+		name: text("name").notNull(),
+		description: text("description"),
+		overview: text("overview"),
+		starter_folder_id: uuid("starter_folder_id").references(
+			() => starterFolders.id,
+			{
+				onDelete: "set null",
+			},
+		),
+		environment_id: integer("environment_id")
+			.notNull()
+			.references(() => environments.id),
+		access: projectAccess("access").notNull().default("private"),
+		availability: projectAvailability("availability").notNull().default("open"),
+		availability_opens: timestamp("availability_opens"),
+		availability_closes: timestamp("availability_closes"),
+		extension_store_enabled: boolean("extension_store_enabled")
+			.notNull()
+			.default(true),
+		search_vector: tsvector("search_vector").generatedAlwaysAs(
+			(): any => sql`
+                setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(description, '')), 'B')
+            `,
+		),
+		created_at: timestamp("created_at").defaultNow().notNull(),
+		updated_at: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(table) => [
+		index("search_vector_index").using("gin", table.search_vector),
+		index("name_trgm_index").using("gin", sql`${table.name} gin_trgm_ops`),
+	],
+);
 
 export const ideSessionStatus = pgEnum("ide_session_status", [
 	"provisioning",
@@ -113,9 +131,9 @@ export const submissions = pgTable("submissions", {
 	user_id: text("user_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
-    ide_session_id: uuid("ide_session_id").references(() => ideSessions.id, {
-        onDelete: "set null",
-    }),
-    content_path: text("content_path").notNull(),
-    submitted_at: timestamp("submitted_at").defaultNow().notNull(), 
+	ide_session_id: uuid("ide_session_id").references(() => ideSessions.id, {
+		onDelete: "set null",
+	}),
+	content_path: text("content_path").notNull(),
+	submitted_at: timestamp("submitted_at").defaultNow().notNull(),
 });

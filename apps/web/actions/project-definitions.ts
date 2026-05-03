@@ -4,14 +4,20 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc, count, sql } from "drizzle-orm";
 import slugify from "slugify";
 import { z } from "zod";
 import { db } from "@/db";
-import { environments, projects, starterFolders } from "@/db/schema";
+import { environments, projects, starterFolders, user } from "@/db/schema";
 import { MAX_STARTER_FILE_SIZE } from "@/lib/constants/project-definitions";
 import { projectSchema } from "@/lib/validations/project";
-import { authActionClient, getRequiredEnv, getS3Client } from "./utils";
+import {
+	actionClient,
+	authActionClient,
+	getRequiredEnv,
+	getS3Client,
+	getServerSession,
+} from "./utils";
 
 const starterFolderUploadSchema = z.object({
 	fileName: z.string().min(1),
@@ -43,11 +49,11 @@ export async function getLaunchableProject(
 	input:
 		| {
 				projectId: string;
-				userId: string;
+				userId?: string;
 		  }
 		| {
 				projectSlug: string;
-				userId: string;
+				userId?: string;
 		  },
 ) {
 	const { userId } = input;
@@ -58,23 +64,31 @@ export async function getLaunchableProject(
 			: eq(projects.slug, input.projectSlug);
 
 	const [res] = await db
-		.select()
+		.select({
+			project: projects,
+			environment: environments,
+			owner: {
+				name: user.name,
+				icon: user.image,
+			},
+		})
 		.from(projects)
 		.where(condition)
-		.leftJoin(environments, eq(projects.environment_id, environments.id));
+		.leftJoin(environments, eq(projects.environment_id, environments.id))
+		.leftJoin(user, eq(projects.user_id, user.id));
 
-	if (!res || !res.projects) {
+	if (!res || !res.project) {
 		throw new Error("Project not found");
 	}
 
-	if (!res.environments) {
+	if (!res.environment) {
 		throw new Error("Project configuration error: Environment not found");
 	}
 
-	const { projects: project, environments: environment } = res;
+	const { project, environment, owner } = res;
 
 	if (project.user_id === userId) {
-		return { ...project, environment };
+		return { ...project, environment, owner };
 	}
 
 	if (project.access === "private") {
@@ -91,7 +105,7 @@ export async function getLaunchableProject(
 		}
 	}
 
-	return { ...project, environment };
+	return { ...project, environment, owner };
 }
 
 export const getStarterFolderUploadSignedUrl = authActionClient
@@ -166,18 +180,20 @@ export const createProjectDefinition = authActionClient
 				user_id: ctx.session.user.id,
 				slug,
 				...parsedInput,
+				starter_folder_id: parsedInput.starter_folder_id || null,
 			});
 
-			await db
-				.update(starterFolders)
-				.set({ status: "active" })
-				.where(
-					and(
-						eq(starterFolders.id, parsedInput.starter_folder_id),
-						eq(starterFolders.user_id, ctx.session.user.id),
-					),
-				);
-
+			if (parsedInput.starter_folder_id) {
+				await db
+					.update(starterFolders)
+					.set({ status: "active" })
+					.where(
+						and(
+							eq(starterFolders.id, parsedInput.starter_folder_id),
+							eq(starterFolders.user_id, ctx.session.user.id),
+						),
+					);
+			}
 			return { success: true };
 		} catch (err) {
 			console.log(err);
@@ -208,14 +224,16 @@ export const getUserProjectDefinitions = authActionClient.action(
 		}
 	},
 );
-// TODO: Change this to not be protected by default, cause public access
-export const getProjectView = authActionClient
+
+export const getProjectView = actionClient
 	.inputSchema(slugSchema)
 	.action(async ({ ctx, parsedInput }) => {
+		const session = await getServerSession();
+
 		try {
 			const project = await getLaunchableProject({
 				projectSlug: parsedInput.slug,
-				userId: ctx.session.user.id,
+				userId: session?.user.id,
 			});
 
 			return { success: true, project };
@@ -270,3 +288,73 @@ export const updateProjectDefinition = authActionClient
 		}
 	});
 */
+
+export const queryProjectMarketplace = actionClient
+	.inputSchema(
+		z.object({
+			query: z.string().min(1),
+			maxResults: z.number().int().positive().max(50).default(20),
+		}),
+	)
+	.action(async ({ parsedInput }) => {
+		const query = sql`websearch_to_tsquery('english', ${parsedInput.query})`;
+
+		const queriedProjects = await db
+			.select({
+				project: projects,
+				environment: environments,
+			})
+			.from(projects)
+			.where(and(eq(projects.access, "public"), sql`search_vector @@ ${query}`))
+			.orderBy(sql`ts_rank(search_vector, ${query}) DESC`)
+			.limit(parsedInput.maxResults)
+			.leftJoin(environments, eq(projects.environment_id, environments.id));
+
+		return { success: true, results: queriedProjects };
+	});
+
+export const getProjectMarketplaceProjects = actionClient
+	.inputSchema(
+		z.object({
+			page: z.number().int().positive().default(1),
+			pageSize: z.number().int().positive().max(50).default(20),
+		}),
+	)
+	.action(async ({ parsedInput }) => {
+		const { page, pageSize } = parsedInput;
+
+		const offsetAmount = (page - 1) * pageSize;
+
+		const paginatedProjects = await db
+			.select({
+				project: projects,
+				environment: environments,
+			})
+			.from(projects)
+			.where(eq(projects.access, "public"))
+			.orderBy(desc(projects.created_at))
+			.limit(pageSize)
+			.offset(offsetAmount)
+			.leftJoin(environments, eq(projects.environment_id, environments.id));
+
+		const [totalCountResult] = await db
+			.select({ value: count() })
+			.from(projects)
+			.where(eq(projects.access, "public"));
+
+		const totalProjects = totalCountResult.value;
+		const totalPages = Math.ceil(totalProjects / pageSize);
+
+		return {
+			success: true,
+			results: paginatedProjects,
+			pagination: {
+				currentPage: page,
+				pageSize: pageSize,
+				totalProjects: totalProjects,
+				totalPages: totalPages,
+				hasNextPage: page < totalPages,
+				hasPreviousPage: page > 1,
+			},
+		};
+	});

@@ -5,6 +5,7 @@ import {
 	GraduationCap,
 	type LucideIcon,
 	Send,
+	Store,
 	TerminalSquare,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +33,11 @@ type DashboardNavItem = {
 };
 
 const dashboardNavItems: DashboardNavItem[] = [
+	{
+		title: "Project Marketplace",
+		href: "/project-marketplace",
+		icon: Store,
+	},
 	{
 		title: "Project Definitions",
 		href: "/project-definitions",

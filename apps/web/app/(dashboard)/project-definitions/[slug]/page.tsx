@@ -8,7 +8,6 @@ export default async function ProjectsPage({
 	params: Promise<{ slug: string }>;
 }) {
 	const { slug } = await params;
-	const session = await getServerSession();
 
 	const result = await getProjectView({ slug });
 	if (result.serverError || result.validationErrors || !result.data?.success) {
@@ -19,10 +18,13 @@ export default async function ProjectsPage({
 
 	return (
 		<ProjectDefinitionView
-			project={result.data.project}
+			project={{
+				...result.data.project,
+				starter_folder_included: !!result.data.project.starter_folder_id,
+			}}
 			creator={{
-				name: session.user.name,
-				icon: session.user.image,
+				name: result.data.project.owner?.name || "",
+				icon: result.data.project.owner?.icon || "",
 			}}
 			environment={result.data.project.environment}
 		/>

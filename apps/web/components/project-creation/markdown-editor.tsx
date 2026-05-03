@@ -1,6 +1,6 @@
 import type { Content } from "@tiptap/react";
 import { useEffect, useState } from "react";
-import { MinimalTiptapEditor } from "./ui/minimal-tiptap";
+import { MinimalTiptapEditor } from "../ui/minimal-tiptap";
 
 type MarkdownEditorProps = {
 	content?: string;
@@ -11,20 +11,21 @@ export function MarkdownEditor({
 	content,
 	onContentChange,
 }: MarkdownEditorProps) {
-	const [value, setValue] = useState<Content>(content|| "");
-
-	useEffect(() => {
-		if (onContentChange) onContentChange(value);
-	}, [value, onContentChange]);
+	const [value, setValue] = useState<Content>(content || "");
 
 	useEffect(() => {
 		setValue((current) => (content && !current ? content : current));
 	}, [content]);
 
+	function handleChange(nextValue: Content) {
+		setValue(nextValue);
+		onContentChange?.(nextValue);
+	}
+
 	return (
 		<MinimalTiptapEditor
 			value={value}
-			onChange={setValue}
+			onChange={handleChange}
 			className="w-full h-full flex flex-col"
 			editorContentClassName="p-5 flex-1 overflow-y-auto "
 			output="markdown"
