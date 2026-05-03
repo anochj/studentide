@@ -12,6 +12,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Project } from "@/lib/validations/project";
 import { CalendarSelector } from "./calendar-selector";
+import { Button } from "../ui/button";
 
 type AvailabilityMode = Project["availability"];
 
@@ -42,9 +43,9 @@ export function AvailabilitySelector({
 		<Tabs
 			value={mode}
 			onValueChange={(value) => setMode(value as AvailabilityMode)}
-			className="w-[400px]"
+			className="w-full"
 		>
-			<TabsList className="grid w-full grid-cols-2">
+			<TabsList className="grid w-full grid-cols-2 min-h-12">
 				<TabsTrigger value="open">
 					<InfinityIcon /> Always Open
 				</TabsTrigger>
@@ -53,6 +54,7 @@ export function AvailabilitySelector({
 					Custom Schedule
 				</TabsTrigger>
 			</TabsList>
+
 			<TabsContent value="open" className="">
 				<Card>
 					<CardHeader>

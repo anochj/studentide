@@ -1,3 +1,5 @@
+"use server";
+
 import { randomUUID } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -7,7 +9,7 @@ import { and, eq } from "drizzle-orm";
 import JSZip from "jszip";
 import z from "zod";
 import { db } from "@/db";
-import { ideSessions, projects, submissions } from "@/db/schema";
+import { ideSessions, projects, submissions, user } from "@/db/schema";
 import { getEfsProjectPath } from "./ide-session-utils";
 import { authActionClient, getRequiredEnv, getS3Client } from "./utils";
 
@@ -128,33 +130,51 @@ export const submitIdeSession = authActionClient
 
 export const getProjectSubmissions = authActionClient
 	.inputSchema(
-		z.object({
-			projectId: z.string(),
-		}),
+		z
+			.object({
+				id: z.string(),
+			})
+			.or(z.object({ slug: z.string().min(1) })),
 	)
 	.action(async ({ ctx, parsedInput }) => {
-		const { projectId } = parsedInput;
+		const projectCondition =
+			"id" in parsedInput
+				? eq(projects.id, parsedInput.id)
+				: eq(projects.slug, parsedInput.slug);
 
 		const [project] = await db
 			.select()
 			.from(projects)
-			.where(eq(projects.id, projectId))
+			.where(projectCondition)
 			.limit(1);
 
 		if (!project) {
 			throw new Error("Project not found");
-		} else if (project.user_id !== ctx.session.user.id) {
+		}
+
+		if (project.user_id !== ctx.session.user.id) {
 			throw new Error("Unauthorized");
 		}
 
-		const projectSubmissions = await db
-			.select()
+		const results = await db
+			.select({
+				submission: submissions,
+				user: {
+					name: user.name,
+					image: user.image,
+				},
+			})
 			.from(submissions)
-			.where(and(eq(submissions.project_id, projectId)));
+			.leftJoin(user, eq(user.id, submissions.user_id))
+			.where(eq(submissions.project_id, project.id));
 
 		return {
 			success: true,
-			submissions: projectSubmissions,
+			submissions: results.map(({ submission, user }) => ({
+				...submission,
+				user: user!,
+			})),
+			project,
 		};
 	});
 

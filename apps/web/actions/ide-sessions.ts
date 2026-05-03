@@ -3,26 +3,30 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import * as ecs from "@aws-sdk/client-ecs";
 import * as efs from "@aws-sdk/client-efs";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { environments, ideSessions } from "@/db/schema";
+import {
+	environments,
+	ideSessions,
+	projects,
+	starterFolders,
+	submissions,
+} from "@/db/schema";
 import {
 	getWorkspaceUsername,
 	type IdeSessionUser,
 	toWorkspaceSegment,
 } from "./ide-session-utils";
 import { getLaunchableProject } from "./project-definitions";
-import { authActionClient, getRequiredEnv, getUserSubscription } from "./utils";
-
-const launchIDESessionSchema = z
-	.object({
-		projectId: z.string().min(1).optional(),
-		ideSessionId: z.string().uuid().optional(),
-	})
-	.refine((input) => input.projectId || input.ideSessionId, {
-		message: "A project ID or IDE session ID is required",
-	});
+import {
+	authActionClient,
+	getRequiredEnv,
+	getS3Client,
+	getUserSubscription,
+} from "./utils";
 
 async function getActiveIDESessionsForUser(userId: string) {
 	return db
@@ -41,12 +45,42 @@ async function getActiveIDESessionsForUser(userId: string) {
 
 export const getUserIDESessions = authActionClient.action(async ({ ctx }) => {
 	try {
-		const sessions = await db
-			.select()
+		const query = await db
+			.select({
+				session: ideSessions,
+				project: {
+					id: projects.id,
+					name: projects.name,
+					slug: projects.slug,
+					availability_opens: projects.availability_opens,
+					availability_closes: projects.availability_closes,
+				},
+				environment: {
+					id: environments.id,
+					name: environments.name,
+					icon: environments.icon,
+				},
+				submission: {
+					id: submissions.id,
+				},
+			})
 			.from(ideSessions)
-			.where(and(eq(ideSessions.user_id, ctx.session.user.id)));
+			.where(and(eq(ideSessions.user_id, ctx.session.user.id)))
+			.leftJoin(projects, eq(projects.id, ideSessions.project_id))
+			.leftJoin(submissions, eq(submissions.project_id, projects.id))
+			.leftJoin(environments, eq(environments.id, projects.environment_id));
 
-		return { success: true, sessions };
+		return {
+			success: true,
+			sessions: query.map(
+				({ session, project, environment, submission }) => ({
+					...session,
+					project: project!,
+					environment: environment!,
+					submission: submission || undefined,
+				}),
+			),
+		};
 	} catch (err) {
 		console.log("Error fetching active IDE sessions:", err);
 		throw new Error("Failed to fetch active IDE sessions");
@@ -56,6 +90,8 @@ export const getUserIDESessions = authActionClient.action(async ({ ctx }) => {
 type ProvisionIdeSessionCommand = {
 	user: IdeSessionUser;
 	projectId: string;
+	identifierSuffix?: string;
+	starterFileOverride?: StarterFileReference;
 };
 
 type RestartIdeSessionCommand = {
@@ -77,6 +113,11 @@ type IdeSessionIdentity = {
 	username: string;
 	projectId: string;
 	identifier: string;
+};
+
+type StarterFileReference = {
+	bucket: string;
+	key: string;
 };
 
 type IdeProvisioningConfig = {
@@ -112,9 +153,15 @@ function buildIdeSessionIdentity({
 	user,
 	projectId,
 	projectSlug,
+	identifierSuffix,
 }: ProvisionIdeSessionCommand & { projectSlug: string }): IdeSessionIdentity {
 	const username = getWorkspaceUsername(user);
-	const projectSegment = toWorkspaceSegment(projectSlug) || projectId;
+	const projectSegment = [
+		toWorkspaceSegment(projectSlug) || projectId,
+		identifierSuffix ? toWorkspaceSegment(identifierSuffix) : null,
+	]
+		.filter(Boolean)
+		.join("-");
 
 	return {
 		id: randomUUID(),
@@ -123,21 +170,6 @@ function buildIdeSessionIdentity({
 		projectId,
 		identifier: `${username}-${projectSegment}`,
 	};
-}
-
-async function getProjectTaskDefinitionArn(environmentId: number) {
-	const [environment] = await db
-		.select({
-			taskDefinitionArn: environments.task_definition_arn,
-		})
-		.from(environments)
-		.where(eq(environments.id, environmentId));
-
-	if (!environment) {
-		throw new Error("Environment not found");
-	}
-
-	return environment.taskDefinitionArn;
 }
 
 function parseTaskSize(value: string | undefined, resourceName: string) {
@@ -308,11 +340,57 @@ function jsonToEnvironmentOverride(json: Record<string, string>) {
 	}));
 }
 
+function getIdeSessionUrl(identifier: string) {
+	return `https://${identifier}-ide.studentide.com`;
+}
+
+async function getSignedStarterFileUrl(source: StarterFileReference) {
+	const command = new GetObjectCommand({
+		Bucket: source.bucket,
+		Key: source.key,
+	});
+
+	return getSignedUrl(getS3Client(), command, {
+		expiresIn: 3600,
+	});
+}
+
+async function getProjectStarterFile(project: {
+	starter_folder_id: string | null;
+}): Promise<StarterFileReference | undefined> {
+	if (!project.starter_folder_id) {
+		return undefined;
+	}
+
+	const [starterFolder] = await db
+		.select({
+			path: starterFolders.path,
+		})
+		.from(starterFolders)
+		.where(
+			and(
+				eq(starterFolders.id, project.starter_folder_id),
+				eq(starterFolders.status, "active"),
+			),
+		)
+		.limit(1);
+
+	if (!starterFolder) {
+		throw new Error("Project starter folder not found");
+	}
+
+	return {
+		bucket: getRequiredEnv("AWS_S3_STARTER_FOLDER_BUCKET_NAME"),
+		key: starterFolder.path,
+	};
+}
+
 async function runSessionTask(input: {
 	identity: IdeSessionIdentity;
 	config: IdeProvisioningConfig;
 	taskDefinitionArn: string;
 	sessionSecret: string;
+	starterFileUrl?: string;
 }) {
 	const runRes = await ecsClient.send(
 		new ecs.RunTaskCommand({
@@ -349,6 +427,9 @@ async function runSessionTask(input: {
 						environment: jsonToEnvironmentOverride({
 							PROJECT_ID: input.identity.projectId,
 							IDENTIFIER: input.identity.identifier,
+							...(input.starterFileUrl
+								? { starterFile: input.starterFileUrl }
+								: {}),
 						}),
 					},
 				],
@@ -366,6 +447,8 @@ async function runSessionTask(input: {
 async function provisionAwsIDESession({
 	user,
 	projectId,
+	identifierSuffix,
+	starterFileOverride,
 }: ProvisionIdeSessionCommand) {
 	const config = getIdeProvisioningConfig();
 	const project = await getLaunchableProject({
@@ -377,10 +460,9 @@ async function provisionAwsIDESession({
 		user,
 		projectId,
 		projectSlug: project.slug,
+		identifierSuffix,
 	});
-	const baseTaskDefinitionArn = await getProjectTaskDefinitionArn(
-		project.environment_id,
-	);
+
 	const accessPoint = await createClientEFSAccessPoint({
 		identity,
 		fileSystemId: config.efsFileSystemId,
@@ -390,7 +472,7 @@ async function provisionAwsIDESession({
 	}
 
 	const baseTaskDefinition = await describeTaskDefinition(
-		baseTaskDefinitionArn,
+		project.environment.task_definition_arn,
 	);
 	const sessionTaskDefinition = await registerSessionTaskDefinition({
 		identity,
@@ -405,11 +487,18 @@ async function provisionAwsIDESession({
 		taskDefinitionArn: sessionTaskDefinition.taskDefinitionArn,
 	});
 
+	const starterFile =
+		starterFileOverride ?? (await getProjectStarterFile(project));
+	const starterFileUrl = starterFile
+		? await getSignedStarterFileUrl(starterFile)
+		: undefined;
+
 	const runRes = await runSessionTask({
 		identity,
 		config,
 		taskDefinitionArn: sessionTaskDefinition.taskDefinitionArn,
 		sessionSecret: randomBytes(32).toString("hex"),
+		starterFileUrl,
 	});
 	const task = runRes.tasks?.[0];
 	if (!task || !task.taskArn) {
@@ -417,6 +506,12 @@ async function provisionAwsIDESession({
 	}
 
 	await markSessionActive(identity.id, task.taskArn);
+
+	return {
+		id: identity.id,
+		identifier: identity.identifier,
+		url: getIdeSessionUrl(identity.identifier),
+	};
 }
 
 async function getRestartSessionRecord({
@@ -478,33 +573,89 @@ async function restartAwsIDESession(input: RestartIdeSessionCommand) {
 	}
 
 	await markSessionActive(session.id, task.taskArn);
+
+	return {
+		id: session.id,
+		identifier: session.identifier,
+		url: getIdeSessionUrl(session.identifier),
+	};
+}
+
+const launchIDESessionSchema = z
+	.object({
+		projectId: z.string().min(1).optional(),
+		ideSessionId: z.string().uuid().optional(),
+	})
+	.refine((input) => input.projectId || input.ideSessionId, {
+		message: "A project ID or IDE session ID is required",
+	});
+
+const launchSubmissionIDESessionSchema = z.object({
+	submissionId: z.string().uuid(),
+});
+
+async function assertUserCanLaunchIDESession(userId: string) {
+	const activePlan = await getUserSubscription();
+	if (!activePlan?.limits) {
+		throw new Error("Failed to fetch active subscription");
+	}
+
+	let activeIDESessions: Awaited<
+		ReturnType<typeof getActiveIDESessionsForUser>
+	>;
+	try {
+		activeIDESessions = await getActiveIDESessionsForUser(userId);
+	} catch (err) {
+		console.log("Error fetching active IDE sessions:", err);
+		throw new Error("Failed to fetch active IDE sessions");
+	}
+
+	if (activeIDESessions.length >= activePlan.limits.maxActiveIDESessions) {
+		throw new Error(
+			"You have reached the maximum number of active IDE sessions for your plan.",
+		);
+	}
+}
+
+async function getTeacherSubmissionForLaunch(input: {
+	submissionId: string;
+	teacherId: string;
+}) {
+	const [result] = await db
+		.select({
+			submission: submissions,
+			project: projects,
+		})
+		.from(submissions)
+		.innerJoin(projects, eq(projects.id, submissions.project_id))
+		.where(eq(submissions.id, input.submissionId))
+		.limit(1);
+
+	if (!result) {
+		throw new Error("Submission not found");
+	}
+
+	if (result.project.user_id !== input.teacherId) {
+		throw new Error("Unauthorized");
+	}
+
+	if (!result.submission.project_id) {
+		throw new Error("Submission is missing a project");
+	}
+
+	return {
+		submission: {
+			...result.submission,
+			project_id: result.submission.project_id,
+		},
+		project: result.project,
+	};
 }
 
 export const launchIDESession = authActionClient
 	.inputSchema(launchIDESessionSchema)
 	.action(async ({ ctx, parsedInput }) => {
-		const activePlan = await getUserSubscription();
-		if (!activePlan?.limits) {
-			throw new Error("Failed to fetch active subscription");
-		}
-
-		let activeIDESessions: Awaited<
-			ReturnType<typeof getActiveIDESessionsForUser>
-		>;
-		try {
-			activeIDESessions = await getActiveIDESessionsForUser(
-				ctx.session.user.id,
-			);
-		} catch (err) {
-			console.log("Error fetching active IDE sessions:", err);
-			throw new Error("Failed to fetch active IDE sessions");
-		}
-
-		if (activeIDESessions.length >= activePlan.limits.maxActiveIDESessions) {
-			throw new Error(
-				"You have reached the maximum number of active IDE sessions for your plan.",
-			);
-		}
+		await assertUserCanLaunchIDESession(ctx.session.user.id);
 
 		const user = {
 			id: ctx.session.user.id,
@@ -512,8 +663,9 @@ export const launchIDESession = authActionClient
 			username: ctx.session.user.username,
 		};
 
+		let session: Awaited<ReturnType<typeof provisionAwsIDESession>>;
 		if (parsedInput.ideSessionId) {
-			await restartAwsIDESession({
+			session = await restartAwsIDESession({
 				ideSessionId: parsedInput.ideSessionId,
 				projectId: parsedInput.projectId,
 				user,
@@ -523,10 +675,92 @@ export const launchIDESession = authActionClient
 				throw new Error("A project ID is required to launch a new IDE session");
 			}
 
-			await provisionAwsIDESession({
+			session = await provisionAwsIDESession({
 				projectId: parsedInput.projectId,
 				user,
 			});
+		}
+
+		return { success: true, session };
+	});
+
+export const launchSubmissionIDESession = authActionClient
+	.inputSchema(launchSubmissionIDESessionSchema)
+	.action(async ({ ctx, parsedInput }) => {
+		await assertUserCanLaunchIDESession(ctx.session.user.id);
+
+		const { submission } = await getTeacherSubmissionForLaunch({
+			submissionId: parsedInput.submissionId,
+			teacherId: ctx.session.user.id,
+		});
+
+		const session = await provisionAwsIDESession({
+			projectId: submission.project_id,
+			user: {
+				id: ctx.session.user.id,
+				name: ctx.session.user.name,
+				username: ctx.session.user.username,
+			},
+			identifierSuffix: `submission-${submission.id.slice(0, 8)}`,
+			starterFileOverride: {
+				bucket: getRequiredEnv("AWS_S3_SUBMISSIONS_BUCKET_NAME"),
+				key: submission.content_path,
+			},
+		});
+
+		return { success: true, session };
+	});
+
+async function killIdeSessionTask(taskArn: string) {
+	await ecsClient.send(
+		new ecs.StopTaskCommand({
+			cluster: getRequiredEnv("ECS_CLUSTER_NAME"),
+			task: taskArn,
+			reason: "Stopped by user - from server",
+		}),
+	);
+}
+
+async function markSessionTerminated(sessionId: string) {
+	await db
+		.update(ideSessions)
+		.set({ status: "terminated", ended_at: new Date() })
+		.where(eq(ideSessions.id, sessionId));
+}
+
+export const stopIDESession = authActionClient
+	.inputSchema(z.object({ ideSessionId: z.string().uuid() }))
+	.action(async ({ ctx, parsedInput }) => {
+		const sessionId = parsedInput.ideSessionId;
+
+		const [session] = await db
+			.select()
+			.from(ideSessions)
+			.where(
+				and(
+					eq(ideSessions.id, sessionId),
+					eq(ideSessions.user_id, ctx.session.user.id),
+				),
+			);
+
+		if (!session) {
+			throw new Error("IDE session not found");
+		}
+
+		if (session.status !== "active") {
+			throw new Error("IDE session is not active");
+		}
+
+		if (!session.task_arn) {
+			throw new Error("IDE session is missing task ARN");
+		}
+
+		try {
+			await killIdeSessionTask(session.task_arn);
+			await markSessionTerminated(session.id);
+		} catch (err) {
+			console.error("Error stopping IDE session:", err);
+			throw new Error("Failed to stop IDE session");
 		}
 
 		return { success: true };

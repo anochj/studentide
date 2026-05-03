@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import slugify from "slugify";
 import { z } from "zod";
 import { db } from "@/db";
-import { projects, starterFolders } from "@/db/schema";
+import { environments, projects, starterFolders } from "@/db/schema";
 import { MAX_STARTER_FILE_SIZE } from "@/lib/constants/project-definitions";
 import { projectSchema } from "@/lib/validations/project";
 import { authActionClient, getRequiredEnv, getS3Client } from "./utils";
@@ -51,21 +51,30 @@ export async function getLaunchableProject(
 		  },
 ) {
 	const { userId } = input;
-	const [project] = await db
+
+	const condition =
+		"projectId" in input
+			? eq(projects.id, input.projectId)
+			: eq(projects.slug, input.projectSlug);
+
+	const [res] = await db
 		.select()
 		.from(projects)
-		.where(
-			"projectId" in input
-				? eq(projects.id, input.projectId)
-				: eq(projects.slug, input.projectSlug),
-		);
+		.where(condition)
+		.leftJoin(environments, eq(projects.environment_id, environments.id));
 
-	if (!project) {
+	if (!res || !res.projects) {
 		throw new Error("Project not found");
 	}
 
+	if (!res.environments) {
+		throw new Error("Project configuration error: Environment not found");
+	}
+
+	const { projects: project, environments: environment } = res;
+
 	if (project.user_id === userId) {
-		return project;
+		return { ...project, environment };
 	}
 
 	if (project.access === "private") {
@@ -82,7 +91,7 @@ export async function getLaunchableProject(
 		}
 	}
 
-	return project;
+	return { ...project, environment };
 }
 
 export const getStarterFolderUploadSignedUrl = authActionClient
@@ -182,16 +191,23 @@ export const getUserProjectDefinitions = authActionClient.action(
 			const userProjects = await db
 				.select()
 				.from(projects)
+				.leftJoin(environments, eq(projects.environment_id, environments.id))
 				.where(eq(projects.user_id, ctx.session.user.id));
 
-			return { success: true, projects: userProjects };
+			const simplified = userProjects
+				.filter((row) => row.projects !== null)
+				.map(({ projects, environments }) => ({
+					project: projects!,
+					environment: environments!,
+				}));
+
+			return { success: true, projects: simplified };
 		} catch (err) {
-			console.log(err);
+			console.error(err);
 			throw new Error("Failed to fetch project definitions");
 		}
 	},
 );
-
 // TODO: Change this to not be protected by default, cause public access
 export const getProjectView = authActionClient
 	.inputSchema(slugSchema)
@@ -212,3 +228,45 @@ export const getProjectView = authActionClient
 			throw new Error("Failed to fetch project view");
 		}
 	});
+
+export const deleteProjectDefinition = authActionClient
+	.inputSchema(idSchema)
+	.action(async ({ ctx, parsedInput }) => {
+		try {
+			await db
+				.delete(projects)
+				.where(
+					and(
+						eq(projects.id, parsedInput.id),
+						eq(projects.user_id, ctx.session.user.id),
+					),
+				);
+
+			return { success: true };
+		} catch (err) {
+			console.log(err);
+			throw new Error("Failed to delete project definition");
+		}
+	});
+
+// TODO: Implement
+/*
+export const updateProjectDefinition = authActionClient
+	.inputSchema(projectSchema.partial().extend({ id: z.string().min(1) }))
+	.action(async ({ ctx, parsedInput }) => {
+		try {
+			const { id, ...updateData } = parsedInput;
+			await db
+				.update(projects)
+				.set(updateData)
+				.where(
+					and(eq(projects.id, id), eq(projects.user_id, ctx.session.user.id)),
+				);
+
+			return { success: true };
+		} catch (err) {
+			console.log(err);
+			throw new Error("Failed to update project definition");
+		}
+	});
+*/

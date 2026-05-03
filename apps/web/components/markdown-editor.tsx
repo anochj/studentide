@@ -26,12 +26,12 @@ export function MarkdownEditor({
 			value={value}
 			onChange={setValue}
 			className="w-full h-full flex flex-col"
-			editorContentClassName="p-5 flex-1 overflow-y-auto"
+			editorContentClassName="p-5 flex-1 overflow-y-auto "
 			output="markdown"
-			placeholder="Enter the project outline. This will be visible to students and can include instructions, resources, and any other relevant information."
+			placeholder="Supports standard markdown formatting, as well as code blocks with syntax highlighting. Perfect for writing detailed project descriptions and instructions!"
 			autofocus={true}
 			editable={true}
-			editorClassName="focus:outline-hidden flex-1 h-full"
+			editorClassName="focus:outline-hidden flex-1 h-full min-h-32"
 			// TODO: Add cdn uploading for images
 			// https://gemini.google.com/app/31b848e8e758100a
 		/>
