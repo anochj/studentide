@@ -1,12 +1,10 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { lstat, readdir, readFile } from "node:fs/promises";
-import path from "node:path";
+import * as ecs from "@aws-sdk/client-ecs";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { and, desc, eq } from "drizzle-orm";
-import JSZip from "jszip";
 import z from "zod";
 import { db } from "@/db";
 import {
@@ -16,57 +14,245 @@ import {
   submissions,
   user,
 } from "@/db/schema";
-import { getEfsProjectPath } from "./ide-session-utils";
-import { authActionClient, getRequiredEnv, getS3Client } from "./utils";
+import {
+  authActionClient,
+  getRequiredEnv,
+  getS3BucketName,
+  getS3Client,
+} from "./utils";
 
 const submissionInputSchema = z.object({
   ideSessionId: z.string().uuid(),
 });
 
-async function assertProjectDirectory(projectPath: string) {
-  const projectStats = await lstat(projectPath).catch(() => null);
-  if (!projectStats?.isDirectory()) {
-    throw new Error("Project directory not found on EFS");
+const ecsClient = new ecs.ECSClient();
+const S3_ARCHIVER_CONTAINER_NAME = "s3-archiver";
+const STUDENT_WORKSPACE_VOLUME_NAME = "student-workspace-volume";
+
+function getEcsSubnets() {
+  const ecsSubnets = getRequiredEnv("ECS_SUBNETS")
+    .split(",")
+    .map((subnet) => subnet.trim())
+    .filter(Boolean);
+
+  if (ecsSubnets.length === 0) {
+    throw new Error("ECS_SUBNETS must contain at least one subnet ID");
   }
+
+  return ecsSubnets;
 }
 
-// TODO: Maybe abstract this logic to be shared with the starter folder dropzone
-async function addDirectoryToZip(zip: JSZip, sourceDir: string, zipDir = "") {
-  const entries = await readdir(sourceDir, { withFileTypes: true });
+function jsonToEnvironmentOverride(json: Record<string, string>) {
+  return Object.entries(json).map(([name, value]) => ({
+    name,
+    value,
+  }));
+}
 
-  await Promise.all(
-    entries.map(async (entry) => {
-      const sourcePath = path.join(sourceDir, entry.name);
-      const relativePath = path.posix.join(zipDir, entry.name);
+async function createSubmissionUploadUrl(submissionPath: string) {
+  const command = new PutObjectCommand({
+    Bucket: getS3BucketName(),
+    Key: submissionPath,
+    ContentType: "application/zip",
+  });
 
-      if (entry.isDirectory()) {
-        zip.folder(relativePath);
-        await addDirectoryToZip(zip, sourcePath, relativePath);
-        return;
-      }
+  return getSignedUrl(getS3Client(), command, {
+    expiresIn: 3600,
+  });
+}
 
-      if (!entry.isFile()) {
-        return;
-      }
+async function describeTaskDefinition(taskDefinitionArn: string) {
+  const response = await ecsClient.send(
+    new ecs.DescribeTaskDefinitionCommand({
+      taskDefinition: taskDefinitionArn,
+    }),
+  );
 
-      zip.file(relativePath, await readFile(sourcePath));
+  if (!response.taskDefinition) {
+    throw new Error("Task definition not found");
+  }
+
+  return response.taskDefinition;
+}
+
+function getTaskDefinitionAccessPointId(taskDefinition: ecs.TaskDefinition) {
+  const workspaceVolume = taskDefinition.volumes?.find(
+    (volume) => volume.name === STUDENT_WORKSPACE_VOLUME_NAME,
+  );
+  const accessPointId =
+    workspaceVolume?.efsVolumeConfiguration?.authorizationConfig?.accessPointId;
+
+  if (!accessPointId) {
+    throw new Error(
+      "IDE session task definition is missing an EFS access point",
+    );
+  }
+
+  return accessPointId;
+}
+
+async function registerS3ArchiverTaskDefinition(input: {
+  baseTaskDefinition: ecs.TaskDefinition;
+  accessPointId: string;
+}) {
+  if (!input.baseTaskDefinition.family) {
+    throw new Error("S3 archiver task definition is missing a family");
+  }
+
+  const response = await ecsClient.send(
+    new ecs.RegisterTaskDefinitionCommand({
+      family: input.baseTaskDefinition.family,
+      containerDefinitions: input.baseTaskDefinition.containerDefinitions,
+      networkMode: input.baseTaskDefinition.networkMode,
+      executionRoleArn: input.baseTaskDefinition.executionRoleArn,
+      taskRoleArn: input.baseTaskDefinition.taskRoleArn,
+      requiresCompatibilities: input.baseTaskDefinition.requiresCompatibilities,
+      runtimePlatform: input.baseTaskDefinition.runtimePlatform,
+      cpu: input.baseTaskDefinition.cpu,
+      memory: input.baseTaskDefinition.memory,
+      volumes: [
+        {
+          name: STUDENT_WORKSPACE_VOLUME_NAME,
+          efsVolumeConfiguration: {
+            fileSystemId: getRequiredEnv("EFS_FILESYSTEM_ID"),
+            transitEncryption: "ENABLED",
+            authorizationConfig: {
+              accessPointId: input.accessPointId,
+              iam: "ENABLED",
+            },
+            rootDirectory: "/",
+          },
+        },
+      ],
+    }),
+  );
+
+  const taskDefinitionArn = response.taskDefinition?.taskDefinitionArn;
+  if (!taskDefinitionArn) {
+    throw new Error("Failed to register S3 archiver task definition");
+  }
+
+  return taskDefinitionArn;
+}
+
+async function deregisterTaskDefinition(taskDefinitionArn: string) {
+  await ecsClient.send(
+    new ecs.DeregisterTaskDefinitionCommand({
+      taskDefinition: taskDefinitionArn,
     }),
   );
 }
 
-async function zipProjectDirectory(projectPath: string) {
-  await assertProjectDirectory(projectPath);
+async function runS3ArchiverTask(input: {
+  taskDefinitionArn: string;
+  projectId: string;
+  signedUrl: string;
+}) {
+  const cluster = getRequiredEnv("ECS_CLUSTER_NAME");
+  const runRes = await ecsClient.send(
+    new ecs.RunTaskCommand({
+      cluster,
+      taskDefinition: input.taskDefinitionArn,
+      count: 1,
+      launchType: "FARGATE",
+      networkConfiguration: {
+        awsvpcConfiguration: {
+          subnets: getEcsSubnets(),
+          securityGroups: [getRequiredEnv("ECS_SECURITY_GROUP")],
+          assignPublicIp: "ENABLED",
+        },
+      },
+      overrides: {
+        containerOverrides: [
+          {
+            name: S3_ARCHIVER_CONTAINER_NAME,
+            environment: jsonToEnvironmentOverride({
+              PROJECT_ID: input.projectId,
+              S3_SIGNED_URL: input.signedUrl,
+            }),
+          },
+        ],
+      },
+    }),
+  );
 
-  const zip = new JSZip();
-  await addDirectoryToZip(zip, projectPath);
+  if (runRes.failures?.length) {
+    throw new Error("Failed to run S3 archiver task");
+  }
 
-  return zip.generateAsync({
-    type: "nodebuffer",
-    compression: "DEFLATE",
-    compressionOptions: {
-      level: 9,
+  const taskArn = runRes.tasks?.[0]?.taskArn;
+  if (!taskArn) {
+    throw new Error("Failed to run S3 archiver task");
+  }
+
+  await ecs.waitUntilTasksStopped(
+    {
+      client: ecsClient,
+      minDelay: 5,
+      maxDelay: 15,
+      maxWaitTime: 900,
     },
+    {
+      cluster,
+      tasks: [taskArn],
+    },
+  );
+
+  const describeRes = await ecsClient.send(
+    new ecs.DescribeTasksCommand({
+      cluster,
+      tasks: [taskArn],
+    }),
+  );
+  const task = describeRes.tasks?.[0];
+  if (!task) {
+    throw new Error("S3 archiver task was not found after completion");
+  }
+
+  const archiverContainer = task.containers?.find(
+    (container) => container.name === S3_ARCHIVER_CONTAINER_NAME,
+  );
+  if (!archiverContainer) {
+    throw new Error("S3 archiver container was not found after completion");
+  }
+
+  if (archiverContainer.exitCode !== 0) {
+    throw new Error(
+      `S3 archiver task failed with exit code ${archiverContainer.exitCode ?? "unknown"}`,
+    );
+  }
+}
+
+async function archiveProjectToSubmission(input: {
+  ideSessionTaskDefinitionArn: string;
+  projectId: string;
+  signedUrl: string;
+}) {
+  const ideSessionTaskDefinition = await describeTaskDefinition(
+    input.ideSessionTaskDefinitionArn,
+  );
+  const accessPointId = getTaskDefinitionAccessPointId(
+    ideSessionTaskDefinition,
+  );
+  const baseArchiverTaskDefinition = await describeTaskDefinition(
+    getRequiredEnv("S3_ARCHIVER_TASK_DEFINITION_ARN"),
+  );
+  const archiverTaskDefinitionArn = await registerS3ArchiverTaskDefinition({
+    baseTaskDefinition: baseArchiverTaskDefinition,
+    accessPointId,
   });
+
+  try {
+    await runS3ArchiverTask({
+      taskDefinitionArn: archiverTaskDefinitionArn,
+      projectId: input.projectId,
+      signedUrl: input.signedUrl,
+    });
+  } finally {
+    await deregisterTaskDefinition(archiverTaskDefinitionArn).catch((err) => {
+      console.error("Failed to deregister S3 archiver task definition:", err);
+    });
+  }
 }
 
 export const submitIdeSession = authActionClient
@@ -93,27 +279,19 @@ export const submitIdeSession = authActionClient
       throw new Error("IDE session is missing a project");
     }
 
-    const user = {
-      id: ctx.session.user.id,
-      name: ctx.session.user.name,
-      username: ctx.session.user.username,
-    };
-    const projectPath = getEfsProjectPath({
-      user,
-      projectId: ideSession.project_id,
-    });
-    const submissionPath = `${ctx.session.user.id}/${ideSession.project_id}/${ideSession.id}/${randomUUID()}.zip`;
-    const bucket = getRequiredEnv("AWS_S3_SUBMISSIONS_BUCKET_NAME");
-    const archive = await zipProjectDirectory(projectPath);
+    if (!ideSession.task_definition_arn) {
+      throw new Error("IDE session is missing a task definition");
+    }
 
-    await getS3Client().send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: submissionPath,
-        Body: archive,
-        ContentType: "application/zip",
-      }),
-    );
+    const submissionPath = `${ctx.session.user.id}/${ideSession.project_id}/${ideSession.id}/${randomUUID()}.zip`;
+    const signedUrl = await createSubmissionUploadUrl(submissionPath);
+
+    // TODO: Let this run in the background
+    archiveProjectToSubmission({
+      ideSessionTaskDefinitionArn: ideSession.task_definition_arn,
+      projectId: ideSession.project_id,
+      signedUrl,
+    });
 
     const [submission] = await db
       .insert(submissions)
@@ -243,7 +421,7 @@ export const getSignedUrlForSubmissionContent = authActionClient
       throw new Error("Unauthorized");
     }
 
-    const bucket = getRequiredEnv("AWS_S3_SUBMISSIONS_BUCKET_NAME");
+    const bucket = getS3BucketName();
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: submission.submissions.content_path,

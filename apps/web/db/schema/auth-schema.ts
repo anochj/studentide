@@ -10,7 +10,7 @@ import {
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
-  name: text("name").notNull(),
+  name: text("name"),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
@@ -19,7 +19,7 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  username: text("username").unique(),
+  username: text("username").unique().notNull(),
   displayUsername: text("display_username"),
   stripeCustomerId: text("stripe_customer_id"),
 });

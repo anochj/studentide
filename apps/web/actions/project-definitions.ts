@@ -14,7 +14,7 @@ import { projectSchema } from "@/lib/validations/project";
 import {
 	actionClient,
 	authActionClient,
-	getRequiredEnv,
+	getS3BucketName,
 	getS3Client,
 	getServerSession,
 } from "./utils";
@@ -115,7 +115,7 @@ export const getStarterFolderUploadSignedUrl = authActionClient
 			const { fileName, fileSize } = parsedInput;
 			const s3Path = `${ctx.session.user.id}/${randomUUID()}/${fileName}`;
 			const command = new PutObjectCommand({
-				Bucket: getRequiredEnv("AWS_S3_STARTER_FOLDER_BUCKET_NAME"),
+				Bucket: getS3BucketName(),
 				Key: s3Path,
 				ContentLength: fileSize,
 			});

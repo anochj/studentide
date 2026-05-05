@@ -7,6 +7,13 @@ import Image from "next/image";
 import { getSignedUrlForSubmissionContent } from "@/actions/submissions";
 import { Button } from "@/components/ui/button";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -135,9 +142,20 @@ export default function UserSubmissionsTable({
             <TableRow>
               <TableCell
                 colSpan={3}
-                className="h-24 text-center text-muted-foreground"
+                className="p-6 text-center text-muted-foreground"
               >
-                No submissions found.
+                <Empty className="min-h-40 border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Download />
+                    </EmptyMedia>
+                    <EmptyTitle>No submissions found</EmptyTitle>
+                    <EmptyDescription>
+                      Submitted work will appear here when you complete a
+                      project.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               </TableCell>
             </TableRow>
           )}

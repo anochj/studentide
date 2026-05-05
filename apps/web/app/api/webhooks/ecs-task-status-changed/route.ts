@@ -12,9 +12,9 @@ type EcsTaskStatusChangedPayload = {
 const WEBHOOK_SECRET_HEADER = "x-webhook-secret";
 
 function getWebhookSecret() {
-	const secret = process.env.AWS_EVENT_BRIDGE_SECRET;
+	const secret = process.env.AWS_IDE_STATUS_WEBHOOK_SECRET;
 	if (!secret) {
-		throw new Error("AWS_EVENT_BRIDGE_SECRET is not configured");
+		throw new Error("AWS_IDE_STATUS_WEBHOOK_SECRET is not configured");
 	}
 
 	return secret;

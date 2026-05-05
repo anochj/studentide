@@ -13,6 +13,19 @@ export function getRequiredEnv(name: string) {
 	return value;
 }
 
+export function getS3BucketName() {
+	const value =
+		process.env.AWS_S3_BUCKET_NAME ??
+		process.env.AWS_S3_STARTER_FOLDER_BUCKET_NAME ??
+		process.env.AWS_S3_SUBMISSIONS_BUCKET_NAME;
+
+	if (!value) {
+		throw new Error("Missing required environment variable: AWS_S3_BUCKET_NAME");
+	}
+
+	return value;
+}
+
 export function getS3Client() {
 	return new S3Client({
 		region: getRequiredEnv("AWS_REGION"),

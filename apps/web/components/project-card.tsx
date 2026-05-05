@@ -65,7 +65,7 @@ export function ProjectCard({
 	});
 
 	return (
-		<Card className="group relative flex flex-col justify-between transition-all hover:border-primary/50 hover:shadow-md cursor-pointer h-full">
+		<Card className="group relative flex flex-col justify-between transition-all hover:border-primary/50 hover:shadow-md cursor-pointer h-full border">
 			{href && (
 				<Link
 					href={href}
@@ -124,10 +124,11 @@ export function ProjectCard({
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent align="center" className="w-min">
-						<Button variant="ghost" size="lg" className="w-full justify-start">
+						{/* TODO: Implement this later, feeling lazy */}
+						{/* <Button variant="ghost" size="lg" className="w-full justify-start">
 							<Pencil />
 							Edit Project
-						</Button>
+						</Button> */}
 
 						<AlertDialog>
 							<AlertDialogTrigger asChild>
@@ -166,11 +167,6 @@ export function ProjectCard({
 								</AlertDialogFooter>
 							</AlertDialogContent>
 						</AlertDialog>
-
-						{/* <PopoverHeader>
-							<PopoverTitle>Title</PopoverTitle>
-							<PopoverDescription>Description text here.</PopoverDescription>
-						</PopoverHeader> */}
 					</PopoverContent>
 				</Popover>
 			</CardHeader>

@@ -1,56 +1,91 @@
+import { AlertCircle, MonitorPlay } from "lucide-react";
+import Link from "next/link";
 import { getUserIDESessions } from "@/actions/ide-sessions";
 import IDESessionCard from "@/components/ide-session-card";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default async function IdeSessionsPage() {
-	const response = await getUserIDESessions();
+  const response = await getUserIDESessions();
 
-	if (response.serverError || !response.data) {
-		return <h1>No IDE sessions found {response.serverError}</h1>;
-	}
+  if (response.serverError || !response.data) {
+    return (
+      <main className="flex h-full min-h-0 flex-1 p-6">
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertCircle />
+            </EmptyMedia>
+            <EmptyTitle>Failed to load IDE sessions</EmptyTitle>
+            <EmptyDescription>
+              {response.serverError ?? "No IDE sessions found."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </main>
+    );
+  }
 
   const { sessions } = response.data;
 
-	return (
-		// <section className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6">
-		//   <h1 className="text-2xl font-bold">IDE Sessions</h1>
-		//   <p className="text-muted-foreground">
-		//     Resume and manage active coding environments here.
-		//   </p>
-		//   {
-		//     sessions.data?.sessions.map((session) => (
-		//       // TODO: Add data, a button that appears to restart the proxy, etc
-		//       <div
-		//         key={session.id}
-		//         className="w-full rounded-md border p-4 text-left"
-		//       >
-		//         <h2 className="text-lg font-semibold">
-		//           Session for Project ID: {session.project_id}
-		//         </h2>
-		//         <p>Status: {session.status}</p>
-		//         <p>Started At: {new Date(session.started_at).toLocaleString()}</p>
-		//       </div>
-		//     ))
-		//   }
-		// </section>
-		<section>
-			{sessions.map((session) => (
-				<IDESessionCard
-					key={session.id}
-					icon={session.environment.icon || ""}
-					name={session.project.name}
-					project_slug={session.project.slug}
-					ide_identifier={session.identifier}
-					started_at={new Date(session.started_at)}
-					status={session.status}
-					submitted={!!session.submission}
-					ended_at={session.ended_at ? new Date(session.ended_at) : null}
-					due_date={
-						session.project.availability_closes
-							? new Date(session.project.availability_closes)
-							: undefined
-					}
-				/>
-			))}
-		</section>
-	);
+  return (
+    <main className="flex h-full flex-col flex-1 min-h-0 p-6">
+      <div className="flex-none flex justify-between items-start pb-4 mb-4 border-b">
+        <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+          IDE Sessions
+        </h1>
+      </div>
+
+      {sessions.length > 0 ? (
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-wrap gap-4">
+            {sessions.map((session) => (
+              <IDESessionCard
+                key={session.id}
+                id={session.id}
+                icon={session.environment.icon || ""}
+                name={session.project.name}
+                project_slug={session.project.slug}
+                ide_identifier={session.identifier}
+                started_at={new Date(session.started_at)}
+                status={session.status}
+                submitted={!!session.submission}
+                ended_at={session.ended_at ? new Date(session.ended_at) : null}
+                due_date={
+                  session.project.availability_closes
+                    ? new Date(session.project.availability_closes)
+                    : undefined
+                }
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MonitorPlay />
+            </EmptyMedia>
+            <EmptyTitle>You have no IDE sessions yet</EmptyTitle>
+            <EmptyDescription>
+              Start a project from the marketplace or create your own project
+              definition.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild variant="default" size="lg">
+              <Link href="/project-marketplace">Browse Marketplace</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      )}
+    </main>
+  );
 }

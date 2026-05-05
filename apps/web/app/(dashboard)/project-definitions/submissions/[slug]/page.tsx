@@ -1,6 +1,14 @@
+import { FileWarning } from "lucide-react";
 import Link from "next/link";
 import { getProjectSubmissions } from "@/actions/submissions";
 import SubmissionsTable from "@/components/submissions/submissions-table";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default async function ProjectsPage({
   params,
@@ -15,31 +23,44 @@ export default async function ProjectsPage({
   }
 
   if (submissionsRes.serverError || !submissionsRes.data) {
-    return <h1>Project not found</h1>;
+    return (
+      <main className="flex h-full min-h-0 flex-1 p-6">
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileWarning />
+            </EmptyMedia>
+            <EmptyTitle>Project not found</EmptyTitle>
+            <EmptyDescription>
+              The requested project could not be loaded.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </main>
+    );
   }
   const { submissions, project } = submissionsRes.data;
 
   return (
-    <section>
-      <h1 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
-        Submissions for{" "}
-        <Link
-          href={`/project-definitions/${project.slug}`}
-          className="underline"
-        >
-          {project.name}
-        </Link>
-      </h1>
+    <main className="flex h-full flex-col flex-1 min-h-0 p-6">
+      <div className="flex-none flex justify-between items-start pb-4 mb-4 border-b">
+        <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+          Submissions for{" "}
+          <Link href={`/project/${project.slug}`} className="underline">
+            {project.name}
+          </Link>
+        </h1>
+      </div>
       <SubmissionsTable
         submissions={submissions.map((sub) => ({
           submission_id: sub.id,
           user: {
-            name: sub.user.name,
+            name: sub.user.name ?? "Unknown student",
             profile: sub.user.image,
           },
           submitted_at: sub.submitted_at,
         }))}
       />
-    </section>
+    </main>
   );
 }

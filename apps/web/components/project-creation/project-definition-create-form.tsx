@@ -243,7 +243,7 @@ export function ProjectDefinitionCreateForm() {
 				/>
 			</div>
 
-			<div className="flex flex-col gap-6 lg:col-span-2">
+			<div className="flex flex-col gap-6 lg:col-span-2 sticky top-8 self-start">
 				<Controller
 					name="access"
 					control={control}
@@ -310,8 +310,8 @@ export function ProjectDefinitionCreateForm() {
 					</div>
 				)}
 
-				<div className="flex justify-end">
-					<Button type="submit" disabled={isBusy || createProject.isSuccess}>
+				<div className="flex justify-end w-full">
+					<Button className="w-full py-7" type="submit" disabled={isBusy || createProject.isSuccess}>
 						{isBusy && <Loader2 className="animate-spin" />}
 						{createProject.isSuccess ? "Created" : "Create Project"}
 					</Button>

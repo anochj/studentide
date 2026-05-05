@@ -24,6 +24,7 @@ import { getLaunchableProject } from "./project-definitions";
 import {
 	authActionClient,
 	getRequiredEnv,
+	getS3BucketName,
 	getS3Client,
 	getUserSubscription,
 } from "./utils";
@@ -72,14 +73,12 @@ export const getUserIDESessions = authActionClient.action(async ({ ctx }) => {
 
 		return {
 			success: true,
-			sessions: query.map(
-				({ session, project, environment, submission }) => ({
-					...session,
-					project: project!,
-					environment: environment!,
-					submission: submission || undefined,
-				}),
-			),
+			sessions: query.map(({ session, project, environment, submission }) => ({
+				...session,
+				project: project!,
+				environment: environment!,
+				submission: submission || undefined,
+			})),
 		};
 	} catch (err) {
 		console.log("Error fetching active IDE sessions:", err);
@@ -380,7 +379,7 @@ async function getProjectStarterFile(project: {
 	}
 
 	return {
-		bucket: getRequiredEnv("AWS_S3_STARTER_FOLDER_BUCKET_NAME"),
+		bucket: getS3BucketName(),
 		key: starterFolder.path,
 	};
 }
@@ -519,15 +518,32 @@ async function getRestartSessionRecord({
 	projectId,
 	ideSessionId,
 }: RestartIdeSessionCommand) {
-	const [session] = await db
-		.select()
+	const [result] = await db
+		.select({
+			session: ideSessions,
+			submission: {
+				id: submissions.id,
+			},
+		})
 		.from(ideSessions)
+		.leftJoin(
+			submissions,
+			and(
+				eq(submissions.ide_session_id, ideSessions.id),
+				eq(submissions.user_id, user.id),
+			),
+		)
 		.where(
 			and(eq(ideSessions.id, ideSessionId), eq(ideSessions.user_id, user.id)),
 		);
+	const session = result?.session;
 
 	if (!session) {
 		throw new Error("IDE session not found");
+	}
+
+	if (result.submission) {
+		throw new Error("IDE session has already been submitted");
 	}
 
 	if (projectId && session.project_id !== projectId) {
@@ -703,7 +719,7 @@ export const launchSubmissionIDESession = authActionClient
 			},
 			identifierSuffix: `submission-${submission.id.slice(0, 8)}`,
 			starterFileOverride: {
-				bucket: getRequiredEnv("AWS_S3_SUBMISSIONS_BUCKET_NAME"),
+				bucket: getS3BucketName(),
 				key: submission.content_path,
 			},
 		});

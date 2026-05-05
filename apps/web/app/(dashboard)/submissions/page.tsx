@@ -1,28 +1,43 @@
+import { AlertCircle } from "lucide-react";
 import { getUserSubmissions } from "@/actions/submissions";
 import UserSubmissionsTable from "@/components/submissions/user-submissions-table";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default async function SubmissionsPage() {
   const { data, serverError } = await getUserSubmissions();
 
   if (serverError || !data) {
     return (
-      <section>
-        <h1 className="scroll-m-20 border-b pb-2 font-satoshi font-semibold text-3xl tracking-tight first:mt-0">
-          Submissions
-        </h1>
-        <p className="text-muted-foreground">
-          Failed to load submissions. Please try again later.
-        </p>
-      </section>
+      <main className="flex h-full min-h-0 flex-1 p-6">
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertCircle />
+            </EmptyMedia>
+            <EmptyTitle>Failed to load submissions</EmptyTitle>
+            <EmptyDescription>
+              {serverError ?? "Please try again later."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </main>
     );
   }
   const { submissions } = data;
 
   return (
-    <section className="space-y-6">
-      <h1 className="scroll-m-20 border-b pb-2 font-satoshi font-semibold text-3xl tracking-tight first:mt-0">
-        Submissions
-      </h1>
+    <main className="flex h-full flex-col flex-1 min-h-0 p-6">
+      <div className="flex-none flex justify-between items-start pb-4 mb-4 border-b">
+        <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+          Your Submissions
+        </h1>
+      </div>
       <UserSubmissionsTable
         submissions={submissions.map((submission) => ({
           submission_id: submission.id,
@@ -31,6 +46,6 @@ export default async function SubmissionsPage() {
           environment: submission.environment,
         }))}
       />
-    </section>
+    </main>
   );
 }

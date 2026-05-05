@@ -1,86 +1,106 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, FolderPlus } from "lucide-react";
 import Link from "next/link";
 import { getUserProjectDefinitions } from "@/actions";
 import { ProjectCard } from "@/components/project-card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default function ProjectsPage() {
-	const projectDefinitionsMutation = useQuery({
-		queryKey: ["project-definitions"],
-		queryFn: async () => {
-			return await getUserProjectDefinitions();
-		},
-	});
-	const result = projectDefinitionsMutation.data;
-	if (!result) return <h1>Loading...</h1>;
+  const projectDefinitionsMutation = useQuery({
+    queryKey: ["project-definitions"],
+    queryFn: async () => {
+      return await getUserProjectDefinitions();
+    },
+  });
 
-	if (result.serverError || result.validationErrors || !result.data?.success) {
-		return (
-			<main className="flex min-h-dvh flex-col items-center justify-center gap-5 p-6 text-center">
-				<div className="space-y-2">
-					<h1 className="text-2xl font-semibold">Failed to load projects</h1>
-					<p className="max-w-sm text-muted-foreground text-sm">
-						{result.serverError ?? "Failed to validate request"}
-					</p>
-				</div>
-			</main>
-		);
-	}
+  const result = projectDefinitionsMutation.data;
 
-	const { projects } = result.data;
-	// const projects = [];
+  if (!result) return <h1>Loading...</h1>;
 
-	return (
-		<main className="h-screen">
-			<div className="flex justify-between">
-				<h1 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
-					Project Definitions
-				</h1>
+  if (result.serverError || result.validationErrors || !result.data?.success) {
+    return (
+      <main className="flex h-full min-h-0 flex-1 p-6">
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertCircle />
+            </EmptyMedia>
+            <EmptyTitle>Failed to load projects</EmptyTitle>
+            <EmptyDescription>
+              {result.serverError ?? "Failed to validate request"}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </main>
+    );
+  }
 
-				<Button asChild variant="default" size="lg">
-					<Link href="/project-definitions/create">Create project</Link>
-				</Button>
-			</div>
+  const projects = result.data.projects;
 
-			<div className="h-full">
-				{projects.length > 0 ? (
-					<div className="flex gap-4">
-						{projects.map(({ environment, project }) => (
-							<div key={project.id} className="w-xs">
-								<ProjectCard
-									id={project.id}
-									href={`/project-definitions/${project.slug}`}
-									name={project.name}
-									description={
-										`${project.description} • ${environment.description}` ||
-										"No description provided"
-									}
-									visibility={project.access}
-									environment_name={environment.name}
-									creation_date={project.created_at.toISOString()}
-									icon={environment.icon || "default"}
-								/>
-							</div>
-						))}
-					</div>
-				) : (
-					<div className="flex flex-col justify-center items-center gap-6 text-center h-full">
-						<div className="space-y-2">
-							<h1 className="text-2xl font-semibold">
-								You have no project definitions yet
-							</h1>
-							<p className="max-w-sm text-muted-foreground text-sm">
-								Try making one to start a workspace and launch IDE sessions.
-							</p>
-						</div>
-						<Button asChild variant="default" size="lg">
-							<Link href="/project-definitions/create">Create project</Link>
-						</Button>
-					</div>
-				)}
-			</div>
-		</main>
-	);
+  return (
+    <main className="flex h-full flex-col flex-1 min-h-0 p-6">
+      <div className="flex-none flex justify-between items-start pb-4 mb-4 border-b">
+        <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+          Project Definitions
+        </h1>
+
+        {projects.length > 0 && (
+          <Button asChild variant="default" size="lg">
+            <Link href="/project-definitions/create">Create project</Link>
+          </Button>
+        )}
+      </div>
+
+      {projects.length > 0 ? (
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-wrap gap-4">
+            {projects.map(({ environment, project }) => (
+              <div key={project.id} className="w-xs">
+                <ProjectCard
+                  id={project.id}
+                  href={`/project/${project.slug}`}
+                  name={project.name}
+                  description={
+                    `${project.description} • ${environment.description}` ||
+                    "No description provided"
+                  }
+                  visibility={project.access}
+                  environment_name={environment.name}
+                  creation_date={project.created_at.toISOString()}
+                  icon={environment.icon || "default"}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FolderPlus />
+            </EmptyMedia>
+            <EmptyTitle>You have no project definitions yet</EmptyTitle>
+            <EmptyDescription>
+              Create one to start a workspace and launch IDE sessions.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild variant="default" size="lg">
+              <Link href="/project-definitions/create">Create project</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      )}
+    </main>
+  );
 }
