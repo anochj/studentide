@@ -1,6 +1,6 @@
 "use client";
 
-import { Receipt, Sparkle, User } from "lucide-react";
+import { Receipt, Sparkle, SquareArrowRightExit, User } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,10 @@ export function UserAccountMenu({
 		});
 	};
 
+	const handleLogout = async () => {
+		await authClient.signOut();
+	};
+
 	return (
 		<Dialog>
 			<DropdownMenu>
@@ -87,7 +91,6 @@ export function UserAccountMenu({
 									{subscriptionLabel}
 								</span>
 							</div>
-
 						</Button>
 					)}
 				</DropdownMenuTrigger>
@@ -105,14 +108,6 @@ export function UserAccountMenu({
 							</span>
 						</div>
 					</DropdownMenuGroup>
-					<DropdownMenuGroup>
-						<DropdownMenuLabel>My Account</DropdownMenuLabel>
-						<DialogTrigger asChild>
-							<DropdownMenuItem className="cursor-pointer">
-								<User /> Profile
-							</DropdownMenuItem>
-						</DialogTrigger>
-					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>Subscriptions</DropdownMenuLabel>
@@ -126,6 +121,17 @@ export function UserAccountMenu({
 							<Link href="/plans">
 								<Sparkle /> Upgrade Plan
 							</Link>
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>My Account</DropdownMenuLabel>
+						<DialogTrigger asChild>
+							<DropdownMenuItem className="cursor-pointer">
+								<User /> Profile
+							</DropdownMenuItem>
+						</DialogTrigger>
+						<DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+							<SquareArrowRightExit /> Logout
 						</DropdownMenuItem>
 					</DropdownMenuGroup>
 				</DropdownMenuContent>

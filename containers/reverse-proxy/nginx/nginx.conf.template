@@ -3,12 +3,10 @@ server {
     listen [::]:80;
 
     location / {
-        # TODO: Add auth with the env variable
         if ($cookie_sessionSecret != "${SESSION_SECRET}") {
             return 401;
         }
 
-        # TODO: Change this to localhost:3000 in production
         proxy_pass http://${UPSTREAM_TARGET};
 
         proxy_http_version 1.1;

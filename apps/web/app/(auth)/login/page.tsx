@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
 	Field,
@@ -11,14 +11,20 @@ import {
 } from "@/components/ui/field";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { type SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import Google from "@/components/icons/Google";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { z } from "zod";
+import {
+	AUTH_REDIRECT_PARAM,
+	getAuthPageHref,
+	getSafeAuthRedirectPath,
+} from "@/lib/auth-redirect";
 
 // Simple login schema - usually kept in @/lib/validations/auth
 const loginSchema = z.object({
@@ -28,7 +34,12 @@ const loginSchema = z.object({
 
 type LoginInput = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPageContent() {
+	const searchParams = useSearchParams();
+	const redirectPath = useMemo(
+		() => getSafeAuthRedirectPath(searchParams.get(AUTH_REDIRECT_PARAM)),
+		[searchParams],
+	);
 	const [serverError, setServerError] = useState<string | null>(null);
 
 	const {
@@ -48,7 +59,7 @@ export default function LoginPage() {
 		const { error } = await authClient.signIn.email({
 			email: data.email,
 			password: data.password,
-			callbackURL: "/dashboard",
+			callbackURL: redirectPath,
 		});
 
 		if (error) {
@@ -143,7 +154,7 @@ export default function LoginPage() {
 							<span className="w-full border-t border-gray-300"></span>
 						</div>
 						<div className="relative flex justify-center text-xs uppercase">
-							<span className="bg-white px-2 text-muted-foreground">
+							<span className="bg-background px-2 text-muted-foreground">
 								Or continue with
 							</span>
 						</div>
@@ -157,7 +168,7 @@ export default function LoginPage() {
 							onClick={() =>
 								authClient.signIn.social({
 									provider: "github",
-									callbackURL: "/dashboard",
+									callbackURL: redirectPath,
 								})
 							}
 						>
@@ -171,11 +182,11 @@ export default function LoginPage() {
 							onClick={() =>
 								authClient.signIn.social({
 									provider: "google",
-									callbackURL: "/dashboard",
+									callbackURL: redirectPath,
 								})
 							}
 						>
-							<Google className="mr-2 h-4 w-4" />
+							<Google />
 							Google
 						</Button>
 					</div>
@@ -183,7 +194,7 @@ export default function LoginPage() {
 					<p className="mt-8 text-center text-sm text-muted-foreground">
 						Don&apos;t have an account?{" "}
 						<Link
-							href="/signup"
+							href={getAuthPageHref("/signup", redirectPath)}
 							className="font-semibold text-primary hover:underline"
 						>
 							Create one for free
@@ -192,5 +203,13 @@ export default function LoginPage() {
 				</div>
 			</section>
 		</main>
+	);
+}
+
+export default function LoginPage() {
+	return (
+		<Suspense>
+			<LoginPageContent />
+		</Suspense>
 	);
 }

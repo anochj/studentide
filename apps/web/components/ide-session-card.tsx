@@ -43,6 +43,7 @@ type ProjectCardProps = {
   ended_at: Date | null;
   status: "provisioning" | "active" | "terminated" | "error";
   ide_identifier: string;
+  sessionSecret: string;
   project_slug: string;
   submitted: boolean;
   due_date?: Date;
@@ -102,6 +103,7 @@ export default function IDESessionCard({
   ended_at,
   status,
   ide_identifier,
+  sessionSecret,
   project_slug,
   submitted,
   due_date,
@@ -137,6 +139,23 @@ export default function IDESessionCard({
     }
 
     router.refresh();
+  }
+
+  function openIdeSession() {
+    // biome-ignore lint/suspicious/noDocumentCookie: The IDE proxy expects a cookie on the shared studentide.com domain.
+    document.cookie = [
+      `session_secret=${encodeURIComponent(sessionSecret)}`,
+      "Domain=.studentide.com",
+      "Path=/",
+      "SameSite=None",
+      "Secure",
+    ].join("; ");
+
+    window.open(
+      `https://${ide_identifier}-ide.studentide.com`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   return (
@@ -245,12 +264,10 @@ export default function IDESessionCard({
             variant="default"
             size="lg"
             className="grow gap-2 transition-colors"
-            asChild
+            onClick={openIdeSession}
           >
-            <Link href={`https://${ide_identifier}-ide.studentide.com`}>
-              <Play className="h-4 w-4" />
-              Open IDE
-            </Link>
+            <Play className="h-4 w-4" />
+            Open IDE
           </Button>
         )}
 

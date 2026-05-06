@@ -28,7 +28,7 @@ export const auth = betterAuth({
 					});
 				}
 
-				const defaultImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+				const defaultImage = `https://api.dicebear.com/9.x/bottts/svg??name=${encodeURIComponent(
 					ctx.body.username,
 				)}`;
 

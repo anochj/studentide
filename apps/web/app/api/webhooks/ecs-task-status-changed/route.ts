@@ -1,15 +1,16 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/db";
 import { ideSessions } from "@/db/schema";
 
-type EcsTaskStatusChangedPayload = {
-	cluster?: unknown;
-	taskArn?: unknown;
-	status?: unknown;
-};
-
 const WEBHOOK_SECRET_HEADER = "x-webhook-secret";
+
+const ecsTaskStatusChangedPayloadSchema = z.object({
+	cluster: z.string().min(1),
+	taskArn: z.string().min(1),
+	status: z.enum(["RUNNING", "STOPPED"]),
+});
 
 function getWebhookSecret() {
 	const secret = process.env.AWS_IDE_STATUS_WEBHOOK_SECRET;
@@ -20,20 +21,6 @@ function getWebhookSecret() {
 	return secret;
 }
 
-function isValidPayload(payload: EcsTaskStatusChangedPayload): payload is {
-	cluster: string;
-	taskArn: string;
-	status: "RUNNING" | "STOPPED";
-} {
-	return (
-		typeof payload.cluster === "string" &&
-		payload.cluster.length > 0 &&
-		typeof payload.taskArn === "string" &&
-		payload.taskArn.length > 0 &&
-		(payload.status === "RUNNING" || payload.status === "STOPPED")
-	);
-}
-
 export async function POST(request: Request) {
 	const expectedSecret = getWebhookSecret();
 	const actualSecret = request.headers.get(WEBHOOK_SECRET_HEADER);
@@ -42,9 +29,9 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	let payload: EcsTaskStatusChangedPayload;
+	let json: unknown;
 	try {
-		payload = await request.json();
+		json = await request.json();
 	} catch {
 		return NextResponse.json(
 			{ error: "Invalid JSON payload" },
@@ -52,13 +39,15 @@ export async function POST(request: Request) {
 		);
 	}
 
-	if (!isValidPayload(payload)) {
+	const result = ecsTaskStatusChangedPayloadSchema.safeParse(json);
+	if (!result.success) {
 		return NextResponse.json(
 			{ error: "Invalid event payload" },
 			{ status: 400 },
 		);
 	}
 
+	const payload = result.data;
 	const status = payload.status === "RUNNING" ? "active" : "terminated";
 	const endedAt = payload.status === "STOPPED" ? new Date() : null;
 

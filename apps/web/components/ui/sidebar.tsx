@@ -4,6 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import { Slot } from "radix-ui";
 import * as React from "react";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -338,6 +339,42 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
     />
+  );
+}
+
+function SidebarLogo({
+  className,
+  iconClassName,
+  logoClassName,
+  markClassName,
+  ...props
+}: React.ComponentProps<"div"> & {
+  iconClassName?: string;
+  logoClassName?: string;
+  markClassName?: string;
+}) {
+  return (
+    <div
+      className={cn("flex min-w-0 items-center gap-2", className)}
+      {...props}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "flex aspect-square size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary font-bold text-sidebar-primary-foreground text-sm",
+          iconClassName,
+        )}
+      >
+        s
+      </div>
+      <Logo
+        className={cn(
+          "min-w-0 truncate text-sm leading-tight group-data-[collapsible=icon]:hidden",
+          logoClassName,
+        )}
+        markClassName={markClassName}
+      />
+    </div>
   );
 }
 
@@ -687,6 +724,7 @@ export {
   SidebarHeader,
   SidebarInput,
   SidebarInset,
+  SidebarLogo,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,

@@ -1,5 +1,7 @@
 "use client";
 
+import { Check, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -11,16 +13,17 @@ import {
 } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/use-subscription";
 import { authClient } from "@/lib/auth-client";
+import { getAuthPageHref } from "@/lib/auth-redirect";
 import { PLAN_LIMITS, Plans } from "@/lib/constants/stripe-configs";
-import { Check, Loader2 } from "lucide-react";
 
 export default function PlansPage() {
 	const { data: session, isPending: isSessionLoading } =
 		authClient.useSession();
 	const currentSubscription = useSubscription(session?.user?.id);
+	const isSignedOut = !session;
 
 	const isBasic =
-		currentSubscription.isSuccess &&
+		!currentSubscription.isSuccess ||
 		(!currentSubscription.data || currentSubscription.data.length === 0);
 	const isLoading = isSessionLoading || currentSubscription.isLoading;
 
@@ -28,7 +31,7 @@ export default function PlansPage() {
 	const plusPlan = Plans.find((plan) => plan.lookupKey === "plus_subscription");
 
 	const handleUpgrade = async () => {
-		const { data, error } = await authClient.subscription.upgrade({
+		const { error } = await authClient.subscription.upgrade({
 			plan: "Plus",
 			successUrl: "/payment-successful",
 			cancelUrl: "/plans",
@@ -40,7 +43,7 @@ export default function PlansPage() {
 	const handleDowngrade = async () => {
         if (!currentSubscription.data || currentSubscription.data.length === 0) return;
         const subscriptionId = currentSubscription.data[0].stripeSubscriptionId;
-		const { data, error } = await authClient.subscription.cancel({
+		await authClient.subscription.cancel({
 			subscriptionId: subscriptionId,
 			returnUrl: "/plans",
 		});
@@ -166,13 +169,21 @@ export default function PlansPage() {
 						</ul>
 					</CardContent>
 					<CardFooter>
-						<Button
-							className="w-full h-12 text-base"
-							disabled={!isBasic}
-							onClick={handleUpgrade}
-						>
-							{!isBasic ? "Current Plan" : "Upgrade to Plus"}
-						</Button>
+						{isSignedOut ? (
+							<Button className="w-full h-12 text-base" asChild>
+								<Link href={getAuthPageHref("/signup", "/plans")}>
+									Sign Up to Buy
+								</Link>
+							</Button>
+						) : (
+							<Button
+								className="w-full h-12 text-base"
+								disabled={!isBasic}
+								onClick={handleUpgrade}
+							>
+								{!isBasic ? "Current Plan" : "Upgrade to Plus"}
+							</Button>
+						)}
 					</CardFooter>
 				</Card>
 			</div>

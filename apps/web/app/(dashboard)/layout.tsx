@@ -1,6 +1,7 @@
 import { getServerSession } from "@/actions/utils";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { getAuthPageHref } from "@/lib/auth-redirect";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -11,7 +12,7 @@ export default async function DashboardLayout({
 	const session = await getServerSession();
 
 	if (!session) {
-		redirect("/login");
+		redirect(getAuthPageHref("/login", "/project-definitions"));
 	}
 
 	return (

@@ -138,7 +138,7 @@ export default function SubmissionsTable({
           return (
             <div className="flex items-center justify-end gap-3 py-2">
               <Button
-                className="gap-2 bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90"
+                className="gap-2"
                 disabled={openInIDEMutation.isPending}
                 onClick={() => {
                   if (onOpenInIDE) {
@@ -221,7 +221,7 @@ export default function SubmissionsTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border bg-white">
+      <div className="overflow-hidden rounded-lg border bg-card text-card-foreground">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -250,7 +250,6 @@ export default function SubmissionsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-slate-50/50"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

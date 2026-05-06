@@ -56,6 +56,7 @@ export default async function IdeSessionsPage() {
                 ide_identifier={session.identifier}
                 started_at={new Date(session.started_at)}
                 status={session.status}
+                sessionSecret={session.session_secret}
                 submitted={!!session.submission}
                 ended_at={session.ended_at ? new Date(session.ended_at) : null}
                 due_date={

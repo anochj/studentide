@@ -57,6 +57,7 @@ export class IDEStack extends cdk.Stack {
 				"Security group for IDE containers. Allows all outbound, only Cloudflare IPs inbound.",
 		});
 
+		// TODO: Could change this to an API call instead
 		const cfIps = [
 			"173.245.48.0/20",
 			"103.21.244.0/22",
@@ -185,6 +186,10 @@ export class IDEStack extends cdk.Stack {
 
 			taskDefinition.addVolume({
 				name: "student-workspace-volume",
+				efsVolumeConfiguration: {
+					fileSystemId: ideEfs.fileSystemId,
+					transitEncryption: "ENABLED", // Highly recommended for EFS
+				},
 			});
 
 			const envContainer = taskDefinition.addContainer("environment", {
@@ -274,6 +279,59 @@ export class IDEStack extends cdk.Stack {
 			}),
 		);
 
+		// s3-archiver
+
+		const archiverRole = new iam.Role(this, "S3ArchiverRole", {
+			assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+			description:
+				"Allows the S3 archiver to write to S3 and mount its EFS Access Point",
+		});
+		starterFileBucket.grantWrite(archiverRole);
+		backendUser.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ["iam:PassRole"],
+				resources: [archiverRole.roleArn],
+			}),
+		);
+
+		const archiverDefinition = new ecs.FargateTaskDefinition(
+			this,
+			`s3-archiver`,
+			{
+				cpu: 512,
+				memoryLimitMiB: 1024,
+				runtimePlatform: ideRuntimePlatform,
+				executionRole: environmentExecutionRole, // do i need this? should I make another one?
+				taskRole: archiverRole,
+			},
+		);
+
+		archiverDefinition.addVolume({
+			name: "student-workspace-volume",
+			efsVolumeConfiguration: {
+				fileSystemId: ideEfs.fileSystemId,
+				transitEncryption: "ENABLED", // Highly recommended for EFS
+			},
+		});
+
+		const archiverContainer = archiverDefinition.addContainer("s3-archiver", {
+			image: ecs.ContainerImage.fromAsset(`${containersRoot}/s3-archiver`, {
+				platform: ideContainerPlatform,
+			}),
+			containerName: "s3-archiver",
+			essential: true,
+			logging: ecs.LogDrivers.awsLogs({
+				streamPrefix: "s3-archiver",
+			}),
+		});
+
+		archiverContainer.addMountPoints({
+			containerPath: "/mnt/efs",
+			sourceVolume: "student-workspace-volume",
+			readOnly: false,
+		});
+
 		const ideStartUpLambda = new nodejs.NodejsFunction(
 			this,
 			"IdeStartupFunction",
@@ -306,6 +364,7 @@ export class IDEStack extends cdk.Stack {
 				detail: {
 					lastStatus: ["RUNNING"],
 					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
 				},
 			},
 			targets: [new eventsTargets.LambdaFunction(ideStartUpLambda)],
@@ -336,8 +395,10 @@ export class IDEStack extends cdk.Stack {
 
 		const webhookConnection = new events.Connection(this, "IdeStatusWebhook", {
 			authorization: events.Authorization.apiKey(
-				"x-webhook-secret", // The header name your REST endpoint expects
-				cdk.SecretValue.unsafePlainText(process.env.AWS_EVENT_BRIDGE_SECRET!),
+				"x-webhook-secret",
+				cdk.SecretValue.unsafePlainText(
+					process.env.AWS_IDE_STATUS_WEBHOOK_SECRET!,
+				),
 			),
 			description: "Connection to external REST API",
 		});
@@ -353,7 +414,7 @@ export class IDEStack extends cdk.Stack {
 			},
 		);
 
-		new events.Rule(this, "IDEStartUp", {
+		new events.Rule(this, "IDEStatusChange", {
 			description:
 				"EventBridge rule to trigger REST endpoint when ECS tasks starts running.",
 			eventPattern: {
@@ -362,6 +423,7 @@ export class IDEStack extends cdk.Stack {
 				detail: {
 					lastStatus: ["RUNNING", "STOPPED"],
 					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
 				},
 			},
 			targets: [
@@ -384,6 +446,7 @@ export class IDEStack extends cdk.Stack {
 				detail: {
 					lastStatus: ["STOPPED"],
 					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
 				},
 			},
 			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
@@ -403,6 +466,10 @@ export class IDEStack extends cdk.Stack {
 
 		new cdk.CfnOutput(this, "EcsSecurityGroup", {
 			value: ideSg.securityGroupId,
+		});
+
+		new cdk.CfnOutput(this, "S3ArchiverTaskDefinition", {
+			value: archiverDefinition.taskDefinitionArn,
 		});
 	}
 

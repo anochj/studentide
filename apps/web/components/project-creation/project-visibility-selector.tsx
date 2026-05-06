@@ -30,7 +30,7 @@ const options = [
 	{
 		value: "public",
 		title: "Public",
-		description: "Your project will be visible to everyone.",
+		description: "Your project will be visible on the marketplace for anyone to view and use.",
 		icon: Globe,
 	},
 	{

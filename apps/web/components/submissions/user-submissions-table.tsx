@@ -67,7 +67,7 @@ export default function UserSubmissionsTable({
   });
 
   return (
-    <div className="rounded-md border bg-white">
+    <div className="overflow-hidden rounded-lg border bg-card text-card-foreground">
       <Table>
         <TableHeader>
           <TableRow>
@@ -85,10 +85,7 @@ export default function UserSubmissionsTable({
         <TableBody>
           {submissions.length > 0 ? (
             submissions.map((submission) => (
-              <TableRow
-                key={submission.submission_id}
-                className="hover:bg-slate-50/50"
-              >
+              <TableRow key={submission.submission_id}>
                 <TableCell>
                   <div className="flex items-center gap-3 py-2">
                     <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background">

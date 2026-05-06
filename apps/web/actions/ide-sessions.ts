@@ -112,6 +112,7 @@ type IdeSessionIdentity = {
 	username: string;
 	projectId: string;
 	identifier: string;
+	sessionSecret: string;
 };
 
 type StarterFileReference = {
@@ -168,6 +169,7 @@ function buildIdeSessionIdentity({
 		username,
 		projectId,
 		identifier: `${username}-${projectSegment}`,
+		sessionSecret: randomBytes(32).toString("hex"),
 	};
 }
 
@@ -191,6 +193,7 @@ async function createProvisioningSessionRecord(input: {
 			id: input.identity.id,
 			user_id: input.identity.userId,
 			identifier: input.identity.identifier,
+			session_secret: input.identity.sessionSecret,
 			project_id: input.identity.projectId,
 			memory: parseTaskSize(input.taskDefinition.memory, "memory"),
 			cpu: parseTaskSize(input.taskDefinition.cpu, "cpu"),
@@ -208,6 +211,13 @@ async function markSessionActive(sessionId: string, taskArn: string) {
 	await db
 		.update(ideSessions)
 		.set({ status: "active", task_arn: taskArn })
+		.where(eq(ideSessions.id, sessionId));
+}
+
+async function addSessionTaskArn(sessionId: string, taskArn: string) {
+	await db
+		.update(ideSessions)
+		.set({ task_arn: taskArn })
 		.where(eq(ideSessions.id, sessionId));
 }
 
@@ -496,7 +506,7 @@ async function provisionAwsIDESession({
 		identity,
 		config,
 		taskDefinitionArn: sessionTaskDefinition.taskDefinitionArn,
-		sessionSecret: randomBytes(32).toString("hex"),
+		sessionSecret: identity.sessionSecret,
 		starterFileUrl,
 	});
 	const task = runRes.tasks?.[0];
@@ -504,7 +514,9 @@ async function provisionAwsIDESession({
 		throw new Error("Failed to run session task");
 	}
 
-	await markSessionActive(identity.id, task.taskArn);
+	// TODO: Not needed, webhook should handle this automatically
+	// await markSessionActive(identity.id, task.taskArn);
+	await addSessionTaskArn(identity.id, task.taskArn); // still need to set arn
 
 	return {
 		id: identity.id,
@@ -573,6 +585,7 @@ async function restartAwsIDESession(input: RestartIdeSessionCommand) {
 		username: getWorkspaceUsername(input.user),
 		projectId: session.project_id,
 		identifier: session.identifier,
+		sessionSecret: session.session_secret,
 	};
 
 	await markSessionProvisioning(session.id);
@@ -581,14 +594,16 @@ async function restartAwsIDESession(input: RestartIdeSessionCommand) {
 		identity,
 		config,
 		taskDefinitionArn: session.task_definition_arn,
-		sessionSecret: randomBytes(32).toString("hex"),
+		sessionSecret: identity.sessionSecret,
 	});
 	const task = runRes.tasks?.[0];
 	if (!task || !task.taskArn) {
 		throw new Error("Failed to run session task");
 	}
 
-	await markSessionActive(session.id, task.taskArn);
+	// TODO: Not needed, webhook should handle this automatically
+	// await markSessionActive(identity.id, task.taskArn);
+	await addSessionTaskArn(identity.id, task.taskArn); // still need to set arn
 
 	return {
 		id: session.id,

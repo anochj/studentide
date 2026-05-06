@@ -113,6 +113,7 @@ export const ideSessions = pgTable("ide_sessions", {
 	project_id: uuid("project_id").references(() => projects.id, {
 		onDelete: "cascade",
 	}),
+	session_secret: text("session_secret").notNull().unique(),
 	memory: integer("memory").notNull(),
 	cpu: integer("cpu").notNull(),
 	identifier: text("identifier").notNull(),

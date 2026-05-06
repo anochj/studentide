@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
 	Field,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/field";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { type SubmitHandler, useForm } from "react-hook-form";
 import { type SignupInput, signupSchema } from "@/lib/validations/signup";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -19,8 +19,19 @@ import Google from "@/components/icons/Google";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import { Loader2 } from "lucide-react"; // Or your preferred spinner icon
+import { useSearchParams } from "next/navigation";
+import {
+	AUTH_REDIRECT_PARAM,
+	getAuthPageHref,
+	getSafeAuthRedirectPath,
+} from "@/lib/auth-redirect";
 
-export default function SignupPage() {
+function SignupPageContent() {
+	const searchParams = useSearchParams();
+	const redirectPath = useMemo(
+		() => getSafeAuthRedirectPath(searchParams.get(AUTH_REDIRECT_PARAM)),
+		[searchParams],
+	);
 	const [serverError, setServerError] = useState<string | null>(null);
 
 	const {
@@ -43,7 +54,7 @@ export default function SignupPage() {
 			password: data.password,
 			name: data.username,
 			username: data.username,
-			callbackURL: "/dashboard", // Optional: where to go after success
+			callbackURL: redirectPath,
 		});
 
 		if (error) {
@@ -136,7 +147,7 @@ export default function SignupPage() {
 							<span className="w-full border-t border-gray-300"></span>
 						</div>
 						<div className="relative flex justify-center text-xs uppercase">
-							<span className="bg-white px-2 text-muted-foreground">
+							<span className="bg-background px-2 text-muted-foreground">
 								Or continue with
 							</span>
 						</div>
@@ -146,7 +157,12 @@ export default function SignupPage() {
 						<Button
 							variant="outline"
 							className="h-12"
-							onClick={() => authClient.signIn.social({ provider: "github" })}
+							onClick={() =>
+								authClient.signIn.social({
+									provider: "github",
+									callbackURL: redirectPath,
+								})
+							}
 						>
 							<GitHubLogoIcon className="mr-2 h-4 w-4" />
 							GitHub
@@ -154,7 +170,12 @@ export default function SignupPage() {
 						<Button
 							variant="outline"
 							className="h-12"
-							onClick={() => authClient.signIn.social({ provider: "google" })}
+							onClick={() =>
+								authClient.signIn.social({
+									provider: "google",
+									callbackURL: redirectPath,
+								})
+							}
 						>
 							<Google />
 							Google
@@ -164,7 +185,7 @@ export default function SignupPage() {
 					<p className="mt-8 text-center text-sm text-muted-foreground">
 						Already have an account?{" "}
 						<Link
-							href="/login"
+							href={getAuthPageHref("/login", redirectPath)}
 							className="font-semibold text-primary hover:underline"
 						>
 							Log in
@@ -183,5 +204,13 @@ export default function SignupPage() {
 				/>
 			</aside>
 		</main>
+	);
+}
+
+export default function SignupPage() {
+	return (
+		<Suspense>
+			<SignupPageContent />
+		</Suspense>
 	);
 }
