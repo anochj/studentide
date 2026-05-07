@@ -23,21 +23,20 @@ jobs:
         with:
             role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
             aws-region: us-east-2
-
       - uses: oven-sh/setup-bun@v2
 
       - name: Install Dependencies 
         run: bun install --filter "!./apps/ide"
 
       - name: Deploy Infra 
-        run: turbo deploy
+        run: bunx turbo deploy
     
       - name: Sync CDK outputs to Vercel env
         working-directory: apps/infra
         run: bash ../../.github/workflows/scripts/cdk-out-to-env.bash
 
       - name: Run Database Migrations
-        run: turbo db:migrate
+        run: bunx turbo db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
