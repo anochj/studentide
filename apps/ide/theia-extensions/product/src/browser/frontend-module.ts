@@ -9,13 +9,14 @@
 
 import '../../src/browser/style/index.css';
 
-import { FrontendApplicationContribution, WidgetFactory, bindViewContribution } from '@theia/core/lib/browser';
+import { FrontendApplicationContribution, WebSocketConnectionProvider, WidgetFactory, bindViewContribution } from '@theia/core/lib/browser';
 import { AboutDialog } from '@theia/core/lib/browser/about-dialog';
 import { applyBranding } from './studentide-config';
 import { CommandContribution } from '@theia/core/lib/common/command';
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
 import { MenuContribution } from '@theia/core/lib/common/menu';
+import { AssignmentOverviewConfigService, AssignmentOverviewConfigServicePath } from '../common/assignment-overview-protocol';
 import { StudentIDEAboutDialog } from './studentide-about-dialog';
 import { StudentIDEContribution } from './studentide-contribution';
 import { StudentIDEGettingStartedWidget } from './studentide-getting-started-widget';
@@ -53,6 +54,12 @@ export default new ContainerModule((bind, _unbind, isBound, rebind) => {
     bind(TypingLoggerFrontendContribution).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(TypingLoggerFrontendContribution);
 
+    bind(AssignmentOverviewConfigService).toDynamicValue(context =>
+        WebSocketConnectionProvider.createProxy<AssignmentOverviewConfigService>(
+            context.container,
+            AssignmentOverviewConfigServicePath
+        )
+    ).inSingletonScope();
     bind(AssignmentOverviewWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
         id: ASSIGNMENT_OVERVIEW_WIDGET_ID,

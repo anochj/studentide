@@ -1,6 +1,13 @@
 "use client";
 
-import { Calendar, Code2, FileText, Rocket, UserCircle } from "lucide-react";
+import {
+	Calendar,
+	Code2,
+	FileText,
+	Puzzle,
+	Rocket,
+	UserCircle,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
@@ -18,6 +25,7 @@ type ProjectDefinitionViewProps = {
 		starter_folder_included?: boolean;
 		availability_opens: Date | null;
 		availability_closes: Date | null;
+		extension_store_enabled: boolean;
 	};
 	creator: {
 		name: string;
@@ -183,6 +191,22 @@ export default function ProjectDefinitionView({
 											Always open
 										</p>
 									)}
+								</div>
+							</div>
+
+							<div className="h-px bg-border" />
+
+							<div className="flex items-start gap-4">
+								<div className="mt-0.5 rounded-md bg-muted p-2 text-muted-foreground">
+									<Puzzle className="h-5 w-5" />
+								</div>
+								<div className="grid gap-1">
+									<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+										Extension Marketplace
+									</p>
+									<p className="text-sm font-medium text-muted-foreground">
+										{project.extension_store_enabled ? "Enabled" : "Disabled"}
+									</p>
 								</div>
 							</div>
 

@@ -39,4 +39,5 @@ yarn-error.log*
 
 # Artifacts
 mnt/
+.mnt
 .env

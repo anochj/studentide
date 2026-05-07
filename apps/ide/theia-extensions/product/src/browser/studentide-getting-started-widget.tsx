@@ -12,31 +12,17 @@ import * as React from 'react';
 import { Message } from '@theia/core/lib/browser';
 import { PreferenceService } from '@theia/core/lib/common';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import {
-    renderDocumentation, renderExtendingCustomizing, renderProductName, renderSourceCode, renderSupport, renderTickets, renderWhatIs, renderCollaboration
-} from './branding-util';
 
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
-import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
-import { WindowService } from '@theia/core/lib/browser/window/window-service';
 
 @injectable()
 export class StudentIDEGettingStartedWidget extends GettingStartedWidget {
 
-    @inject(VSXEnvironment)
-    protected readonly environment: VSXEnvironment;
-
-    @inject(WindowService)
-    protected readonly windowService: WindowService;
-
     @inject(PreferenceService)
     protected readonly preferenceService: PreferenceService;
 
-    protected vscodeApiVersion: string;
-
     protected async doInit(): Promise<void> {
         super.doInit();
-        this.vscodeApiVersion = await this.environment.getVscodeApiVersion();
         await this.preferenceService.ready;
         this.update();
     }
@@ -50,117 +36,57 @@ export class StudentIDEGettingStartedWidget extends GettingStartedWidget {
     }
 
     protected render(): React.ReactNode {
-        return <div className='gs-container'>
-            <div className='gs-content-container'>
-                <div className='gs-float'>
-                    {/* TODO: Replace the getting started logo with the final StudentIDE logo asset. */}
-                    <div className='gs-logo'>
-                    </div>
-                    {this.renderActions()}
-                </div>
+        return <div className='gs-container studentide-startup'>
+            <div className='gs-content-container studentide-startup-content'>
                 {this.renderHeader()}
-                <hr className='gs-hr' />
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {this.renderNews()}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderWhatIs(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderExtendingCustomizing(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderSupport(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderTickets(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderSourceCode(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderDocumentation(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {this.renderAIBanner()}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderCollaboration(this.windowService)}
-                    </div>
-                </div>
-            </div>
-            <div className='gs-preference-container'>
-                {this.renderPreferences()}
-            </div>
-        </div>;
-    }
-
-    protected renderActions(): React.ReactNode {
-        return <div className='gs-container'>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderStart()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderRecentWorkspaces()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderSettings()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderHelp()}
-                </div>
+                {this.renderQuickStart()}
             </div>
         </div>;
     }
 
     protected renderHeader(): React.ReactNode {
-        return <div className='gs-header'>
-            {renderProductName()}
-            {this.renderVersion()}
+        return <div className='studentide-startup-header'>
+            <h1>StudentIDE</h1>
+            <p>Start a workspace for a coding project.</p>
         </div>;
     }
 
-    protected renderVersion(): React.ReactNode {
-        return <div>
-            <p className='gs-sub-header' >
-                {this.applicationInfo ? 'Version ' + this.applicationInfo.version : '-'}
-            </p>
-
-            <p className='gs-sub-header' >
-                {'VS Code API Version: ' + this.vscodeApiVersion}
-            </p>
-        </div>;
+    protected renderQuickStart(): React.ReactNode {
+        return <section className='studentide-quick-start'>
+            <h2>Quick Start</h2>
+            <ul>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doCreateFile} onKeyDown={this.doCreateFileEnter}>
+                        New File
+                    </a>
+                </li>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doOpen} onKeyDown={this.doOpenEnter}>
+                        Open
+                    </a>
+                </li>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doOpenFile} onKeyDown={this.doOpenFileEnter}>
+                        Open File
+                    </a>
+                </li>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doOpenFolder} onKeyDown={this.doOpenFolderEnter}>
+                        Open Folder
+                    </a>
+                </li>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doOpenWorkspace} onKeyDown={this.doOpenWorkspaceEnter}>
+                        Open Workspace
+                    </a>
+                </li>
+                <li>
+                    <a role='button' tabIndex={0} onClick={this.doOpenRecentWorkspace} onKeyDown={this.doOpenRecentWorkspaceEnter}>
+                        Open Recent
+                    </a>
+                </li>
+            </ul>
+        </section>;
     }
 
-    protected renderAIBanner(): React.ReactNode {
-        const framework = super.renderAIBanner();
-        if (React.isValidElement<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>>(framework)) {
-            return React.cloneElement(framework, { className: 'gs-section' });
-        }
-        return framework;
-    }
 }

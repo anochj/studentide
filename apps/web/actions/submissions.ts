@@ -14,12 +14,8 @@ import {
   submissions,
   user,
 } from "@/db/schema";
-import {
-  authActionClient,
-  getRequiredEnv,
-  getS3BucketName,
-  getS3Client,
-} from "./utils";
+import { env } from "@/lib/env";
+import { authActionClient, getS3BucketName, getS3Client } from "./utils";
 
 const submissionInputSchema = z.object({
   ideSessionId: z.string().uuid(),
@@ -28,19 +24,6 @@ const submissionInputSchema = z.object({
 const ecsClient = new ecs.ECSClient();
 const S3_ARCHIVER_CONTAINER_NAME = "s3-archiver";
 const STUDENT_WORKSPACE_VOLUME_NAME = "student-workspace-volume";
-
-function getEcsSubnets() {
-  const ecsSubnets = getRequiredEnv("ECS_SUBNETS")
-    .split(",")
-    .map((subnet) => subnet.trim())
-    .filter(Boolean);
-
-  if (ecsSubnets.length === 0) {
-    throw new Error("ECS_SUBNETS must contain at least one subnet ID");
-  }
-
-  return ecsSubnets;
-}
 
 function jsonToEnvironmentOverride(json: Record<string, string>) {
   return Object.entries(json).map(([name, value]) => ({
@@ -114,7 +97,7 @@ async function registerS3ArchiverTaskDefinition(input: {
         {
           name: STUDENT_WORKSPACE_VOLUME_NAME,
           efsVolumeConfiguration: {
-            fileSystemId: getRequiredEnv("EFS_FILESYSTEM_ID"),
+            fileSystemId: env.EFS_FILESYSTEM_ID,
             transitEncryption: "ENABLED",
             authorizationConfig: {
               accessPointId: input.accessPointId,
@@ -148,7 +131,7 @@ async function runS3ArchiverTask(input: {
   projectId: string;
   signedUrl: string;
 }) {
-  const cluster = getRequiredEnv("ECS_CLUSTER_NAME");
+  const cluster = env.ECS_CLUSTER_NAME;
   const runRes = await ecsClient.send(
     new ecs.RunTaskCommand({
       cluster,
@@ -157,8 +140,8 @@ async function runS3ArchiverTask(input: {
       launchType: "FARGATE",
       networkConfiguration: {
         awsvpcConfiguration: {
-          subnets: getEcsSubnets(),
-          securityGroups: [getRequiredEnv("ECS_SECURITY_GROUP")],
+          subnets: env.ECS_SUBNETS,
+          securityGroups: [env.ECS_SECURITY_GROUP],
           assignPublicIp: "ENABLED",
         },
       },
@@ -235,7 +218,7 @@ async function archiveProjectToSubmission(input: {
     ideSessionTaskDefinition,
   );
   const baseArchiverTaskDefinition = await describeTaskDefinition(
-    getRequiredEnv("S3_ARCHIVER_TASK_DEFINITION_ARN"),
+    env.S3_ARCHIVER_TASK_DEFINITION_ARN,
   );
   const archiverTaskDefinitionArn = await registerS3ArchiverTaskDefinition({
     baseTaskDefinition: baseArchiverTaskDefinition,

@@ -93,7 +93,7 @@
   --surface-2: oklch(26% 0.015 260);
   --surface-3: oklch(30% 0.02 260);
 
-  --brand: oklch(55% 0.2 270);
+  --brand: oklab(54.979% 0 -0.20021);
   --brand-foreground: oklch(100% 0 0);
   --brand-soft: oklch(30% 0.05 270);
   --brand-glow: oklch(55% 0.2 270 / 14%);

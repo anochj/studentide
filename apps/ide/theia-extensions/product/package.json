@@ -28,12 +28,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/eclipse-theia/studentide.git"
+    "url": "https://studentide.com"
   },
   "bugs": {
-    "url": "https://github.com/eclipse-theia/studentide/issues"
+    "url": "https://studentide.com/support"
   },
-  "homepage": "https://github.com/eclipse-theia/studentide",
+  "homepage": "https://studentide.com",
   "files": [
     "lib",
     "src"

@@ -8,11 +8,15 @@
  ********************************************************************************/
 
 import { AbstractViewContribution, FrontendApplication, FrontendApplicationContribution } from '@theia/core/lib/browser';
-import { injectable } from '@theia/core/shared/inversify';
+import { inject, injectable } from '@theia/core/shared/inversify';
+import { AssignmentOverviewConfigService } from '../common/assignment-overview-protocol';
 import { ASSIGNMENT_OVERVIEW_LABEL, ASSIGNMENT_OVERVIEW_WIDGET_ID, AssignmentOverviewWidget } from './overview-widget';
 
 @injectable()
 export class AssignmentOverviewContribution extends AbstractViewContribution<AssignmentOverviewWidget> implements FrontendApplicationContribution {
+
+    @inject(AssignmentOverviewConfigService)
+    protected readonly configService: AssignmentOverviewConfigService;
 
     constructor() {
         super({
@@ -26,6 +30,9 @@ export class AssignmentOverviewContribution extends AbstractViewContribution<Ass
     }
 
     async initializeLayout(_app: FrontendApplication): Promise<void> {
-        await this.openView({ activate: false });
+        const config = await this.configService.getConfig();
+        if (config.projectOverview.trim().length > 0) {
+            await this.openView({ activate: false });
+        }
     }
 }

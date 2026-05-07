@@ -1,18 +1,17 @@
-import * as cdk from "aws-cdk-lib/core";
-import { Construct } from "constructs";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecs from "aws-cdk-lib/aws-ecs";
-import * as efs from "aws-cdk-lib/aws-efs";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as s3 from "aws-cdk-lib/aws-s3";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
-import * as events from "aws-cdk-lib/aws-events";
-import * as eventsTargets from "aws-cdk-lib/aws-events-targets";
-import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
-
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as efs from "aws-cdk-lib/aws-efs";
+import * as events from "aws-cdk-lib/aws-events";
+import * as eventsTargets from "aws-cdk-lib/aws-events-targets";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as cdk from "aws-cdk-lib/core";
+import type { Construct } from "constructs";
 
 const projectRoot = path.resolve(__dirname, "../../..");
 const ideContainerPlatform = ecrAssets.Platform.LINUX_ARM64;
@@ -20,9 +19,24 @@ const ideRuntimePlatform = {
 	operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
 	cpuArchitecture: ecs.CpuArchitecture.ARM64,
 };
+
+function requiredEnv(name: string) {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(`Missing required environment variable: ${name}`);
+	}
+
+	return value;
+}
+
 export class IDEStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
+
+		const cloudflareZoneId = requiredEnv("CLOUDFLARE_ZONE_ID");
+		const cloudflareApiToken = requiredEnv("CLOUDFLARE_API_TOKEN");
+		const ideStatusWebhookSecret = requiredEnv("AWS_IDE_STATUS_WEBHOOK_SECRET");
+		const ideStatusWebhookUrl = requiredEnv("IDE_STATUS_WEBHOOK_URL");
 
 		const ideVpc = new ec2.Vpc(this, "IdeVpc", {
 			maxAzs: 2,
@@ -46,6 +60,9 @@ export class IDEStack extends cdk.Stack {
 
 		const backendUser = new iam.User(this, "BackendUser", {
 			userName: "studentide-backend-user",
+		});
+		const backendAccessKey = new iam.CfnAccessKey(this, "BackendAccessKey", {
+			userName: backendUser.userName,
 		});
 		starterFileBucket.grantRead(backendUser);
 		starterFileBucket.grantWrite(backendUser);
@@ -341,8 +358,8 @@ export class IDEStack extends cdk.Stack {
 				description:
 					"Lambda function to start up IDE environment on ECS. Registers to CF.",
 				environment: {
-					CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID!,
-					CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN!,
+					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
+					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
 				},
 			},
 		);
@@ -379,8 +396,8 @@ export class IDEStack extends cdk.Stack {
 				description:
 					"Lambda function to shut down IDE environment on ECS. Deregisters from CF.",
 				environment: {
-					CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID!,
-					CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN!,
+					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
+					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
 				},
 			},
 		);
@@ -396,9 +413,7 @@ export class IDEStack extends cdk.Stack {
 		const webhookConnection = new events.Connection(this, "IdeStatusWebhook", {
 			authorization: events.Authorization.apiKey(
 				"x-webhook-secret",
-				cdk.SecretValue.unsafePlainText(
-					process.env.AWS_IDE_STATUS_WEBHOOK_SECRET!,
-				),
+				cdk.SecretValue.unsafePlainText(ideStatusWebhookSecret),
 			),
 			description: "Connection to external REST API",
 		});
@@ -408,7 +423,7 @@ export class IDEStack extends cdk.Stack {
 			"IdeStatusWebhookDestination",
 			{
 				connection: webhookConnection,
-				endpoint: process.env.IDE_STATUS_WEBHOOK_URL!,
+				endpoint: ideStatusWebhookUrl,
 				httpMethod: events.HttpMethod.POST,
 				rateLimitPerSecond: 10,
 			},
@@ -452,23 +467,43 @@ export class IDEStack extends cdk.Stack {
 			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
 		});
 
-		new cdk.CfnOutput(this, "EfsFileSystemId", {
+		new cdk.CfnOutput(this, "AWS_REGION", {
+			value: this.region,
+		});
+
+		new cdk.CfnOutput(this, "AWS_S3_BUCKET_NAME", {
+			value: starterFileBucket.bucketName,
+		});
+
+		new cdk.CfnOutput(this, "AWS_S3_ACCESS_KEY_ID", {
+			value: backendAccessKey.ref,
+		});
+
+		new cdk.CfnOutput(this, "AWS_S3_SECRET_ACCESS_KEY", {
+			value: backendAccessKey.attrSecretAccessKey,
+		});
+
+		new cdk.CfnOutput(this, "AWS_IDE_STATUS_WEBHOOK_SECRET", {
+			value: ideStatusWebhookSecret,
+		});
+
+		new cdk.CfnOutput(this, "EFS_FILESYSTEM_ID", {
 			value: ideEfs.fileSystemId,
 		});
 
-		new cdk.CfnOutput(this, "EcsClusterName", {
+		new cdk.CfnOutput(this, "ECS_CLUSTER_NAME", {
 			value: ideCluster.clusterName,
 		});
 
-		new cdk.CfnOutput(this, "EcsSubnets", {
+		new cdk.CfnOutput(this, "ECS_SUBNETS", {
 			value: ideVpc.publicSubnets.map((s) => s.subnetId).join(","),
 		});
 
-		new cdk.CfnOutput(this, "EcsSecurityGroup", {
+		new cdk.CfnOutput(this, "ECS_SECURITY_GROUP", {
 			value: ideSg.securityGroupId,
 		});
 
-		new cdk.CfnOutput(this, "S3ArchiverTaskDefinition", {
+		new cdk.CfnOutput(this, "S3_ARCHIVER_TASK_DEFINITION_ARN", {
 			value: archiverDefinition.taskDefinitionArn,
 		});
 	}

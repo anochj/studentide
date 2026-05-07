@@ -1,4 +1,5 @@
 import path from "node:path";
+import { env } from "@/lib/env";
 
 export type IdeSessionUser = {
   id: string;
@@ -22,9 +23,8 @@ export function getEfsProjectPath(input: {
   user: IdeSessionUser;
   projectId: string;
 }) {
-  const efsRoot = process.env.EFS_MOUNT_PATH ?? "/mnt/efs";
   return path.join(
-    efsRoot,
+    env.EFS_MOUNT_PATH,
     getWorkspaceUsername(input.user),
     input.projectId,
     "project",

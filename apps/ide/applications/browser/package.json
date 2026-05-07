@@ -6,13 +6,13 @@
   "version": "1.70.200",
   "license": "MIT",
   "author": "StudentIDE authors",
-  "homepage": "https://github.com/eclipse-theia/studentide#readme",
+  "homepage": "https://studentide.com",
   "bugs": {
-    "url": "https://github.com/eclipse-theia/theia/issues"
+    "url": "https://studentide.com/support"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eclipse-theia/studentide.git"
+    "url": "https://studentide.com"
   },
   "engines": {
     "yarn": ">=1.7.0 <2",
@@ -49,28 +49,6 @@
     }
   },
   "dependencies": {
-    "@theia/ai-anthropic": "1.70.2",
-    "@theia/ai-chat": "1.70.2",
-    "@theia/ai-claude-code": "1.70.2",
-    "@theia/ai-code-completion": "1.70.2",
-    "@theia/ai-codex": "1.70.2",
-    "@theia/ai-copilot": "1.70.2",
-    "@theia/ai-core": "1.70.2",
-    "@theia/ai-core-ui": "1.70.2",
-    "@theia/ai-editor": "1.70.2",
-    "@theia/ai-google": "1.70.2",
-    "@theia/ai-history": "1.70.2",
-    "@theia/ai-huggingface": "1.70.2",
-    "@theia/ai-ide": "1.70.2",
-    "@theia/ai-llamafile": "1.70.2",
-    "@theia/ai-mcp": "1.70.2",
-    "@theia/ai-mcp-server": "1.70.2",
-    "@theia/ai-mcp-ui": "1.70.2",
-    "@theia/ai-ollama": "1.70.2",
-    "@theia/ai-openai": "1.70.2",
-    "@theia/ai-scanoss": "1.70.2",
-    "@theia/ai-terminal": "1.70.2",
-    "@theia/ai-vercel-ai": "1.70.2",
     "@theia/bulk-edit": "1.70.2",
     "@theia/callhierarchy": "1.70.2",
     "@theia/collaboration": "1.70.2",

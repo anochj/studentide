@@ -5,7 +5,7 @@
     "deploy": {
       "dependsOn": ["^deploy"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": []
+      "outputs": ["cdk-outputs.json"]
     },
     "build": {
       "dependsOn": ["^build"],

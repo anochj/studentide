@@ -9,7 +9,6 @@
 
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import * as React from 'react';
-import { getBrandingVariant } from './studentide-config';
 
 export interface ExternalBrowserLinkProps {
     text: string;
@@ -18,9 +17,11 @@ export interface ExternalBrowserLinkProps {
 }
 
 export function renderProductName(): React.ReactNode {
-    const variant = getBrandingVariant();
-    const suffix = variant !== 'stable' ? ` ${variant.charAt(0).toUpperCase() + variant.slice(1)}` : '';
-    return <h1>Student<span className="gs-blue-header">IDE</span>{suffix}</h1>;
+    return <h1 className='studentide-wordmark'>Student<span className='studentide-wordmark-accent'>IDE</span></h1>;
+}
+
+export function renderProductLogo(): React.ReactNode {
+    return <div className='studentide-wordmark'>Student<span className='studentide-wordmark-accent'>IDE</span></div>;
 }
 
 function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
@@ -37,14 +38,14 @@ function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
 export function renderWhatIs(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            What is this?
+            Project workspace
         </h3>
         <div>
-            StudentIDE is a modern and open IDE for the browser. StudentIDE is based on the <BrowserLink text="Theia platform"
-                url="https://studentide.org" windowService={windowService} ></BrowserLink>.
+            StudentIDE opens a prepared browser workspace for each coding project, so students start with the right files,
+            tools, and instructions in place.
         </div>
         <div>
-            StudentIDE runs as a browser application and can be hosted locally or in a container.
+            Instructors define the project once, then launch, manage, and review student sessions with consistent context.
         </div>
     </div>;
 }
@@ -52,17 +53,15 @@ export function renderWhatIs(windowService: WindowService): React.ReactNode {
 export function renderExtendingCustomizing(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Extending/Customizing StudentIDE
+            Extension support
         </h3>
         <div >
-            You can extend StudentIDE at runtime by installing VS Code extensions, e.g. from the <BrowserLink text="OpenVSX registry" url="https://open-vsx.org/"
+            Add language tools and editor capabilities by installing VS Code-compatible extensions from the <BrowserLink text="OpenVSX registry" url="https://open-vsx.org/"
                 windowService={windowService} ></BrowserLink>, an open marketplace for VS Code extensions. Just open the extension view or browse <BrowserLink
                     text="OpenVSX online" url="https://open-vsx.org/" windowService={windowService} ></BrowserLink>.
         </div>
         <div>
-            Furthermore, StudentIDE is based on the flexible Theia platform. Therefore, StudentIDE can serve as a <span className='gs-text-bold'>template</span> for building
-            custom tools and IDEs. Browse <BrowserLink text="the documentation" url="https://studentide.org/docs/composing_applications/"
-                windowService={windowService} ></BrowserLink> to help you customize and build your own StudentIDE-based product.
+            Keep extensions focused on the project runtime so the workspace stays predictable for students and reviewable for instructors.
         </div>
     </div>;
 }
@@ -70,12 +69,10 @@ export function renderExtendingCustomizing(windowService: WindowService): React.
 export function renderSupport(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Professional Support
+            Classroom support
         </h3>
         <div>
-            Professional support, implementation services, consulting and training for building tools like StudentIDE and for building other tools based on Theia is
-            available by selected companies as listed on the <BrowserLink text=" Theia support page" url="https://studentide.org/support/"
-                windowService={windowService} ></BrowserLink>.
+            Use project instructions, submission notes, and instructor feedback to keep each workspace tied to the assignment outcome.
         </div>
     </div>;
 }
@@ -83,20 +80,14 @@ export function renderSupport(windowService: WindowService): React.ReactNode {
 export function renderTickets(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Reporting feature requests and bugs
+            Reporting issues
         </h3>
         <div >
-            The features in StudentIDE are based on Theia and the included
-            extensions/plugins. For bugs in Theia please consider opening an issue in
-            the <BrowserLink text="Theia project on Github" url="https://github.com/eclipse-theia/theia/issues/new/choose"
-                windowService={windowService} ></BrowserLink>.
+            If a workspace does not launch, save, or submit correctly, capture the project name, browser, and recent action before reporting it.
         </div>
         <div>
-            StudentIDE only packages existing functionality into a browser product
-            for the product. If you believe there is a mistake in packaging, something needs to be added to the
-            packaging or the browser app does not work properly,
-            please <BrowserLink text="open an issue on Github" url="https://github.com/eclipse-theia/studentide/issues/new/choose"
-                windowService={windowService} ></BrowserLink> to let us know.
+            Please <BrowserLink text="open an issue" url="https://studentide.com/support"
+                windowService={windowService} ></BrowserLink> with enough detail to reproduce the problem.
         </div>
     </div>;
 }
@@ -104,11 +95,11 @@ export function renderTickets(windowService: WindowService): React.ReactNode {
 export function renderSourceCode(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Source Code
+            Source code
         </h3>
         <div >
-            The source code of StudentIDE is available
-            on <BrowserLink text="Github" url="https://github.com/eclipse-theia/studentide"
+            StudentIDE is organized around project definitions, prepared IDE sessions, and structured submissions.
+            Browse the project source on <BrowserLink text="GitHub" url="https://studentide.com"
                 windowService={windowService} ></BrowserLink>.
         </div>
     </div>;
@@ -120,8 +111,8 @@ export function renderDocumentation(windowService: WindowService): React.ReactNo
             Documentation
         </h3>
         <div >
-            Please see the <BrowserLink text="documentation" url="https://studentide.org/docs/user_getting_started/"
-                windowService={windowService} ></BrowserLink> on how to use StudentIDE.
+            Read the <BrowserLink text="documentation" url="https://studentide.com/docs"
+                windowService={windowService} ></BrowserLink> on how to launch a workspace, install extensions, and submit project work.
         </div>
     </div>;
 }
@@ -132,11 +123,7 @@ export function renderCollaboration(windowService: WindowService): React.ReactNo
             Collaboration
         </h3>
         <div >
-            The IDE features a built-in collaboration feature.
-            You can share your workspace with others and work together in real-time by clicking on the <i>Collaborate</i> item in the status bar.
-            The collaboration feature is powered by
-            the <BrowserLink text="Open Collaboration Tools" url="https://www.open-collab.tools/" windowService={windowService} /> project
-            and uses their public server infrastructure.
+            Share a workspace when the project calls for live help or paired work. Confirm course policy before inviting collaborators.
         </div>
     </div>;
 }

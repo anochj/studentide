@@ -77,6 +77,7 @@ export function ProjectDefinitionCreateForm() {
 			availability_closes: undefined,
 			availability_opens: undefined,
 			overview: "",
+			extension_store_enabled: true,
 		},
 	});
 
@@ -288,12 +289,22 @@ export function ProjectDefinitionCreateForm() {
 					<FieldDescription>
 						Additional controls to show in the IDE for this project.
 					</FieldDescription>
-					<Field orientation="horizontal" className="w-fit">
-						<FieldLabel htmlFor="disable-extensions">
-							Disable Extension Marketplace
-						</FieldLabel>
-						<Switch id="disable-extensions" disabled />
-					</Field>
+					<Controller
+						name="extension_store_enabled"
+						control={control}
+						render={({ field }) => (
+							<Field orientation="horizontal" className="w-fit">
+								<FieldLabel htmlFor="disable-extensions">
+									Disable Extension Marketplace
+								</FieldLabel>
+								<Switch
+									id="disable-extensions"
+									checked={field.value === false}
+									onCheckedChange={(checked) => field.onChange(!checked)}
+								/>
+							</Field>
+						)}
+					/>
 				</FieldSet>
 
 				{createProject.isError && (

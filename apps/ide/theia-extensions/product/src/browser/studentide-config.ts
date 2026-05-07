@@ -9,7 +9,7 @@
 
 import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
 
-export type BrandingVariant = 'stable' | 'next';
+export type BrandingVariant = 'stable';
 
 export function getBrandingVariant(): BrandingVariant {
     try {
@@ -21,8 +21,5 @@ export function getBrandingVariant(): BrandingVariant {
 }
 
 export function applyBranding(): void {
-    const variant = getBrandingVariant();
-    if (variant !== 'stable') {
-        document.body.setAttribute('data-theia-branding', variant);
-    }
+    document.body.setAttribute('data-studentide-branding', getBrandingVariant());
 }

@@ -14,6 +14,7 @@ export const projectSchema = z
 		availability_closes: z.date().optional(),
 		starter_folder_id: z.string(),
 		overview: z.string().optional(),
+		extension_store_enabled: z.boolean().default(true),
 	})
 	.refine(
 		(data) => {

@@ -10,7 +10,7 @@
 import * as React from 'react';
 import { AboutDialog, AboutDialogProps, ABOUT_CONTENT_CLASS } from '@theia/core/lib/browser/about-dialog';
 import { injectable, inject } from '@theia/core/shared/inversify';
-import { renderDocumentation, renderProductName, renderSourceCode, renderSupport, renderTickets, renderWhatIs } from './branding-util';
+import { renderDocumentation, renderProductLogo, renderProductName, renderSourceCode, renderSupport, renderTickets, renderWhatIs } from './branding-util';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 @injectable()
@@ -44,8 +44,8 @@ export class StudentIDEAboutDialog extends AboutDialog {
     protected renderContent(): React.ReactNode {
         return <div className='ad-container'>
             <div className='ad-float'>
-                {/* TODO: Replace the about dialog logo with the final StudentIDE logo asset. */}
                 <div className='ad-logo'>
+                    {renderProductLogo()}
                 </div>
                 {this.renderExtensions()}
             </div>

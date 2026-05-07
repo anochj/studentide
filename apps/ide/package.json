@@ -3,14 +3,14 @@
   "private": true,
   "version": "1.70.200",
   "license": "MIT",
-  "author": "Rob Moran <github@thegecko.org>",
-  "homepage": "https://github.com/eclipse-theia/studentide#readme",
+  "author": "StudentIDE authors",
+  "homepage": "https://studentide.com",
   "bugs": {
-    "url": "https://github.com/eclipse-theia/theia/issues"
+    "url": "https://studentide.com/support"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eclipse-theia/studentide.git"
+    "url": "https://studentide.com"
   },
   "engines": {
     "yarn": ">=1.7.0 <2",

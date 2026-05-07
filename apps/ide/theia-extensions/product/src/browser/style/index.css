@@ -7,36 +7,41 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
+@font-face {
+    font-family: "Satoshi";
+    src: url("../fonts/Satoshi-Variable.woff2") format("woff2");
+    font-display: swap;
+    font-weight: 300 900;
+}
+
 :root {
-    /* TODO: Replace this placeholder with the final StudentIDE logo asset. */
-    --theia-branding-logo: url(../icons/studentide-logo.png);
+    --studentide-background: oklch(18% 0.015 260);
+    --studentide-foreground: oklch(85% 0.01 260);
+    --studentide-heading: oklch(100% 0 0);
+    --studentide-muted: oklch(68% 0.015 260);
+    --studentide-surface-1: oklch(22% 0.015 260);
+    --studentide-surface-2: oklch(26% 0.015 260);
+    --studentide-surface-3: oklch(30% 0.02 260);
+    --studentide-brand: oklch(55% 0.2 270);
+    --studentide-brand-soft: oklch(30% 0.05 270);
+    --studentide-mint: oklch(75% 0.12 180);
+    --studentide-border: oklch(36% 0.015 260 / 55%);
+    --studentide-font: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 .theia-icon {
-    /* TODO: Replace this placeholder with the final StudentIDE icon asset. */
     background-image: url("../icons/512-512.png");
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
 }
 
-body[data-theia-branding="next"] {
-    /* TODO: Remove this variant or replace it with a StudentIDE alternate brand asset if variants are still needed. */
-    --theia-branding-logo: url(../icons/studentide-logo-next.png);
-}
-
-body[data-theia-branding="next"] .theia-icon {
-    /* TODO: Remove this variant or replace it with a StudentIDE alternate icon if variants are still needed. */
-    background-image: url("../icons/512-512-next.png");
-}
-
-.gs-blue-header {
-    color: #5088e7;
-    text-transform: capitalize;
-    font-weight: 600;
+.studentide-wordmark-accent {
+    color: var(--studentide-brand);
 }
 
 .gs-text-bold {
+    color: var(--studentide-heading);
     font-weight: 600;
 }
 
@@ -49,24 +54,17 @@ body[data-theia-branding="next"] .theia-icon {
     padding-left: 20px;
 }
 
-.gs-logo {
-    background-image: var(--theia-branding-logo);
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    width: 250px;
-    height: 118px;
-    padding: 20px;
-}
-
+.gs-logo,
 .ad-logo {
-    background-image: var(--theia-branding-logo);
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: contain;
     width: 250px;
-    height: 118px;
-    padding: 20px;
+    min-height: 40px;
+    padding: 0 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .ad-float {
@@ -77,6 +75,253 @@ body[data-theia-branding="next"] .theia-icon {
     padding: 20px;
     width: 1150px;
     height: 700;
+}
+
+.gs-container,
+.ad-container,
+.gs-content-container,
+.studentide-assignment-overview-content {
+    color: var(--studentide-foreground);
+    font-family: var(--studentide-font);
+    font-weight: 350;
+}
+
+.gs-content-container,
+.ad-container {
+    max-width: 1150px;
+}
+
+.gs-header h1,
+.studentide-wordmark {
+    margin: 0;
+    color: var(--studentide-heading);
+    font-family: var(--studentide-font);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.055em;
+    line-height: 1;
+    text-transform: lowercase;
+}
+
+.gs-logo .studentide-wordmark,
+.ad-logo .studentide-wordmark {
+    font-size: 1.5rem;
+}
+
+.studentide-startup {
+    min-height: 100%;
+    background: var(--studentide-background);
+}
+
+.studentide-startup-content {
+    width: min(34rem, calc(100% - 4rem));
+    max-width: none;
+    margin: 0 auto;
+    padding: 4.5rem 0 2rem;
+}
+
+.studentide-startup-header {
+    margin-bottom: 2.5rem;
+}
+
+.studentide-startup-header h1 {
+    margin: 0;
+    color: var(--studentide-heading);
+    font-family: var(--studentide-font);
+    font-size: 2rem;
+    font-weight: 650;
+    letter-spacing: 0;
+    line-height: 1.1;
+}
+
+.studentide-startup-header p {
+    margin: 0.5rem 0 0;
+    color: var(--studentide-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.studentide-quick-start h2 {
+    margin: 0 0 0.75rem;
+    color: var(--studentide-heading);
+    font-family: var(--studentide-font);
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.studentide-quick-start ul {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.studentide-quick-start a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    color: var(--studentide-mint);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.studentide-quick-start a:hover {
+    color: var(--studentide-heading);
+}
+
+.studentide-quick-start a:focus {
+    outline: 1px solid var(--studentide-brand);
+    outline-offset: 2px;
+}
+
+.gs-sub-header {
+    color: var(--studentide-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.gs-hr {
+    border: 0;
+    border-top: 1px solid var(--studentide-border);
+    margin: 16px 0 18px;
+}
+
+.gs-section {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.gs-section-header,
+.studentide-assignment-overview-content h2 {
+    margin: 0 0 8px;
+    color: var(--studentide-heading);
+    font-family: var(--studentide-font);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.gs-section div,
+.studentide-assignment-overview-content p {
+    color: var(--studentide-muted);
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.gs-section a {
+    color: var(--studentide-mint);
+}
+
+.studentide-assignment-overview-content {
+    height: 100%;
+    padding: 18px;
+    background: var(--studentide-background);
+    overflow: auto;
+}
+
+.studentide-assignment-countdown {
+    display: grid;
+    gap: 4px;
+    margin: 0 0 18px;
+    padding: 12px;
+    border: 1px solid var(--studentide-border);
+    border-radius: 8px;
+    background: var(--studentide-surface-1);
+}
+
+.studentide-assignment-countdown-label {
+    color: var(--studentide-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.studentide-assignment-countdown strong {
+    color: var(--studentide-heading);
+    font-size: 1.15rem;
+    font-weight: 650;
+    line-height: 1.15;
+}
+
+.studentide-assignment-countdown time {
+    color: var(--studentide-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.studentide-assignment-countdown-past {
+    border-color: color-mix(in oklch, var(--studentide-brand) 65%, var(--studentide-border));
+}
+
+.studentide-assignment-overview-markdown {
+    color: var(--studentide-muted);
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.studentide-assignment-overview-markdown p,
+.studentide-assignment-overview-markdown ul,
+.studentide-assignment-overview-markdown ol,
+.studentide-assignment-overview-markdown pre,
+.studentide-assignment-overview-markdown blockquote {
+    margin: 0 0 12px;
+}
+
+.studentide-assignment-overview-markdown h1,
+.studentide-assignment-overview-markdown h2,
+.studentide-assignment-overview-markdown h3 {
+    margin: 18px 0 8px;
+    color: var(--studentide-heading);
+    font-family: var(--studentide-font);
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.25;
+}
+
+.studentide-assignment-overview-markdown h1 {
+    font-size: 1.15rem;
+}
+
+.studentide-assignment-overview-markdown h2 {
+    font-size: 1rem;
+}
+
+.studentide-assignment-overview-markdown h3 {
+    font-size: 0.92rem;
+}
+
+.studentide-assignment-overview-markdown a {
+    color: var(--studentide-mint);
+}
+
+.studentide-assignment-overview-markdown code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--studentide-surface-2);
+    color: var(--studentide-heading);
+    font-family: var(--theia-ui-font-family);
+    font-size: 0.85em;
+}
+
+.studentide-assignment-overview-markdown pre {
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid var(--studentide-border);
+    border-radius: 6px;
+    background: var(--studentide-surface-1);
+}
+
+.studentide-assignment-overview-markdown pre code {
+    padding: 0;
+    background: transparent;
 }
 
 ul.theia-aboutExtensions {

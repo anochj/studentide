@@ -43,6 +43,8 @@ if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ] && [ -n "$STARTER_ZIP_URL" ]; 
     chown -R 6767:6767 "$WORKSPACE_DIR" 
 fi
 
+
+
 # start theia
-exec runuser -u theia -- env HOME="/home" node /opt/theia/applications/browser/lib/backend/main.js "$WORKSPACE_DIR" \
+exec runuser -u theia -- env HOME="/home" VSX_REGISTRY_URL="$VSX_REGISTRY_URL" node /opt/theia/applications/browser/lib/backend/main.js "$WORKSPACE_DIR" \
     --hostname=0.0.0.0 \
