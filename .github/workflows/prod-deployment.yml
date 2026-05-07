@@ -1,9 +1,14 @@
 name: Production Deployment
-on: [push]
+on: 
+  push:
+    branches:
+      - main
 jobs:
   Production-Deployment:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
     env: 
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -17,7 +22,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
             role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-            aws-region: us-east-1
+            aws-region: us-east-2
 
       - uses: oven-sh/setup-bun@v2
 
