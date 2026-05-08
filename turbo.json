@@ -6,14 +6,14 @@
       "dependsOn": ["^deploy"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["cdk-outputs.json"],
+      "passThroughEnv": ["AWS_*"],
       "env": [
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
         "CLOUDFLARE_ZONE_ID",
         "CLOUDFLARE_API_TOKEN",
         "AWS_IDE_STATUS_WEBHOOK_SECRET",
-        "IDE_STATUS_WEBHOOK_URL",
-        "AWS_REGION",
-        "CDK_DEFAULT_REGION",
-        "CDK_DEFAULT_ACCOUNT"
+        "IDE_STATUS_WEBHOOK_URL"
       ]
     },
     "build": {
