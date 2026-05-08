@@ -38,14 +38,14 @@ jobs:
       - name: Deploy Infra 
         run: bunx turbo deploy
         env:
-          AWS_REGION: us-east-2
+          AwsRegion: us-east-2
           CDK_DEFAULT_REGION: us-east-2
           CDK_DEFAULT_ACCOUNT: ${{ steps.aws-login.outputs.aws-account-id }}
           
           # Your existing secrets
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AWS_IDE_STATUS_WEBHOOK_SECRET: ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
+          AwsIdeStatusWebhookSecret: ${{ secrets.AwsIdeStatusWebhookSecret }}
           IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
     
       - name: Sync CDK outputs to Vercel env

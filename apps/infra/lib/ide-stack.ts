@@ -35,7 +35,7 @@ export class IDEStack extends cdk.Stack {
 
 		const cloudflareZoneId = requiredEnv("CLOUDFLARE_ZONE_ID");
 		const cloudflareApiToken = requiredEnv("CLOUDFLARE_API_TOKEN");
-		const ideStatusWebhookSecret = requiredEnv("AWS_IDE_STATUS_WEBHOOK_SECRET");
+		const ideStatusWebhookSecret = requiredEnv("AwsIdeStatusWebhookSecret");
 		const ideStatusWebhookUrl = requiredEnv("IDE_STATUS_WEBHOOK_URL");
 
 		const ideVpc = new ec2.Vpc(this, "IdeVpc", {
@@ -470,43 +470,43 @@ export class IDEStack extends cdk.Stack {
 			readOnly: false,
 		});
 
-		new cdk.CfnOutput(this, "AWS_REGION", {
+		new cdk.CfnOutput(this, "AwsRegion", {
 			value: this.region,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_BUCKET_NAME", {
+		new cdk.CfnOutput(this, "AwsS3BucketName", {
 			value: starterFileBucket.bucketName,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_ACCESS_KEY_ID", {
+		new cdk.CfnOutput(this, "AwsS3AccessKeyId", {
 			value: backendAccessKey.ref,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_SECRET_ACCESS_KEY", {
+		new cdk.CfnOutput(this, "AwsS3SecretAccessKey", {
 			value: backendAccessKey.attrSecretAccessKey,
 		});
 
-		new cdk.CfnOutput(this, "AWS_IDE_STATUS_WEBHOOK_SECRET", {
+		new cdk.CfnOutput(this, "AwsIdeStatusWebhookSecret", {
 			value: ideStatusWebhookSecret,
 		});
 
-		new cdk.CfnOutput(this, "EFS_FILESYSTEM_ID", {
+		new cdk.CfnOutput(this, "EfsFilesystemId", {
 			value: ideEfs.fileSystemId,
 		});
 
-		new cdk.CfnOutput(this, "ECS_CLUSTER_NAME", {
+		new cdk.CfnOutput(this, "EcsClusterName", {
 			value: ideCluster.clusterName,
 		});
 
-		new cdk.CfnOutput(this, "ECS_SUBNETS", {
+		new cdk.CfnOutput(this, "EcsSubnets", {
 			value: ideVpc.publicSubnets.map((s) => s.subnetId).join(","),
 		});
 
-		new cdk.CfnOutput(this, "ECS_SECURITY_GROUP", {
+		new cdk.CfnOutput(this, "EcsSecurityGroup", {
 			value: ideSg.securityGroupId,
 		});
 
-		new cdk.CfnOutput(this, "S3_ARCHIVER_TASK_DEFINITION_ARN", {
+		new cdk.CfnOutput(this, "S3ArchiverTaskDefinitionArn", {
 			value: archiverDefinition.taskDefinitionArn,
 		});
 	}

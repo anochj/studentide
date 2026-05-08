@@ -16,16 +16,16 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   STRIPE_SECRET_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  AWS_REGION: z.string().min(1),
+  AwsRegion: z.string().min(1),
   AWS_S3_ENDPOINT: z.url().optional(),
-  AWS_S3_ACCESS_KEY_ID: z.string().min(1),
-  AWS_S3_SECRET_ACCESS_KEY: z.string().min(1),
-  AWS_S3_BUCKET_NAME: z.string().min(1),
-  AWS_IDE_STATUS_WEBHOOK_SECRET: z.string().min(1),
-  EFS_FILESYSTEM_ID: z.string().min(1),
+  AwsS3AccessKeyId: z.string().min(1),
+  AwsS3SecretAccessKey: z.string().min(1),
+  AwsS3BucketName: z.string().min(1),
+  AwsIdeStatusWebhookSecret: z.string().min(1),
+  EfsFilesystemId: z.string().min(1),
   EFS_MOUNT_PATH: z.string().min(1).default("/mnt/efs"),
-  ECS_CLUSTER_NAME: z.string().min(1),
-  ECS_SUBNETS: z
+  EcsClusterName: z.string().min(1),
+  EcsSubnets: z
     .string()
     .min(1)
     .transform((value, ctx) => {
@@ -37,15 +37,15 @@ const envSchema = z.object({
       if (subnets.length === 0) {
         ctx.addIssue({
           code: "custom",
-          message: "ECS_SUBNETS must contain at least one subnet ID",
+          message: "EcsSubnets must contain at least one subnet ID",
         });
         return z.NEVER;
       }
 
       return subnets;
     }),
-  ECS_SECURITY_GROUP: z.string().min(1),
-  S3_ARCHIVER_TASK_DEFINITION_ARN: z.string().min(1),
+  EcsSecurityGroup: z.string().min(1),
+  S3ArchiverTaskDefinitionArn: z.string().min(1),
 });
 
 const parsedEnv = envSchema.parse(process.env);

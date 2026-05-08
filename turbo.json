@@ -12,7 +12,7 @@
         "CDK_DEFAULT_REGION",
         "CLOUDFLARE_ZONE_ID",
         "CLOUDFLARE_API_TOKEN",
-        "AWS_IDE_STATUS_WEBHOOK_SECRET",
+        "AwsIdeStatusWebhookSecret",
         "IDE_STATUS_WEBHOOK_URL"
       ]
     },
@@ -24,6 +24,12 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "db:migrate": {
+      "dependsOn": ["^db:migrate"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["DATABASE_URL"],
+      "outputs": []
     }
   }
 }

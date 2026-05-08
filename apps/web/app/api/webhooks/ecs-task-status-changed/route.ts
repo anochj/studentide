@@ -14,7 +14,7 @@ const ecsTaskStatusChangedPayloadSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const expectedSecret = env.AWS_IDE_STATUS_WEBHOOK_SECRET;
+  const expectedSecret = env.AwsIdeStatusWebhookSecret;
   const actualSecret = request.headers.get(WEBHOOK_SECRET_HEADER);
 
   if (actualSecret !== expectedSecret) {

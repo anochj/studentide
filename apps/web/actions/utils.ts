@@ -6,20 +6,20 @@ import { PLAN_LIMITS } from "@/lib/constants/stripe-configs";
 import { env } from "@/lib/env";
 
 export function getS3BucketName() {
-  return env.AWS_S3_BUCKET_NAME;
+  return env.AwsS3BucketName;
 }
 
 export function getS3Client() {
   const useCustomEndpoint = Boolean(env.AWS_S3_ENDPOINT);
 
   return new S3Client({
-    region: env.AWS_REGION,
+    region: env.AwsRegion,
     ...(useCustomEndpoint
       ? { endpoint: env.AWS_S3_ENDPOINT, forcePathStyle: true }
       : {}),
     credentials: {
-      accessKeyId: env.AWS_S3_ACCESS_KEY_ID,
-      secretAccessKey: env.AWS_S3_SECRET_ACCESS_KEY,
+      accessKeyId: env.AwsS3AccessKeyId,
+      secretAccessKey: env.AwsS3SecretAccessKey,
     },
   });
 }
