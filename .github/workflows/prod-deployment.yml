@@ -45,7 +45,7 @@ jobs:
           # Your existing secrets
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AwsIdeStatusWebhookSecret: ${{ secrets.AwsIdeStatusWebhookSecret }}
+          AWS_IDE_STATUS_WEBHOOK_SECRET: ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
           IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
     
       - name: Sync CDK outputs to Vercel env
