@@ -5,7 +5,13 @@
     "deploy": {
       "dependsOn": ["^deploy"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["cdk-outputs.json"]
+      "outputs": ["cdk-outputs.json"],
+      "env": [
+        "CLOUDFLARE_ZONE_ID",
+        "CLOUDFLARE_API_TOKEN",
+        "AWS_IDE_STATUS_WEBHOOK_SECRET",
+        "IDE_STATUS_WEBHOOK_URL"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],

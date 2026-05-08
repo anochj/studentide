@@ -13,11 +13,6 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      
-      CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      AWS_IDE_STATUS_WEBHOOK_SECRET:  ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
-      IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
 
     steps:
       - name: Check out repository code
@@ -37,6 +32,11 @@ jobs:
         uses: docker/setup-buildx-action@v4
       - name: Deploy Infra 
         run: bunx turbo deploy
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AWS_IDE_STATUS_WEBHOOK_SECRET:  ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
+          IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
     
       - name: Sync CDK outputs to Vercel env
         working-directory: apps/infra
