@@ -1,4 +1,5 @@
 import { AlertCircle, MonitorPlay } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getUserIDESessions } from "@/actions/ide-sessions";
 import IDESessionCard from "@/components/ide-session-card";
@@ -11,6 +12,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "IDE Sessions",
+  description: "Resume and manage prepared studentide IDE sessions.",
+  path: "/ide-sessions",
+  noIndex: true,
+});
 
 export default async function IdeSessionsPage() {
   const response = await getUserIDESessions();

@@ -1,4 +1,5 @@
 import { AlertCircle } from "lucide-react";
+import type { Metadata } from "next";
 import { getUserSubmissions } from "@/actions/submissions";
 import UserSubmissionsTable from "@/components/submissions/user-submissions-table";
 import {
@@ -8,6 +9,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Submissions",
+  description: "Review your studentide project submissions.",
+  path: "/submissions",
+  noIndex: true,
+});
 
 export default async function SubmissionsPage() {
   const { data, serverError } = await getUserSubmissions();

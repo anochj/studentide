@@ -1,4 +1,5 @@
 import { FileWarning } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getProjectSubmissions } from "@/actions/submissions";
 import SubmissionsTable from "@/components/submissions/submissions-table";
@@ -9,6 +10,22 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { createPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  return createPageMetadata({
+    title: "Project Submissions",
+    description: "Review submissions for a studentide project definition.",
+    path: `/project-definitions/submissions/${slug}`,
+    noIndex: true,
+  });
+}
 
 export default async function ProjectsPage({
   params,
