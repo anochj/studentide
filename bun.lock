@@ -49,7 +49,7 @@
       "devDependencies": {
         "@types/jest": "^30",
         "@types/node": "^24.10.1",
-        "aws-cdk": "2.1118.2",
+        "aws-cdk": "^2.1121.0",
         "dotenv": "^17.4.2",
         "esbuild": "^0.28.0",
         "jest": "^30",
@@ -1556,7 +1556,7 @@
 
     "available-typed-arrays": ["available-typed-arrays@1.0.7", "", { "dependencies": { "possible-typed-array-names": "^1.0.0" } }, "sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ=="],
 
-    "aws-cdk": ["aws-cdk@2.1118.2", "", { "bin": { "cdk": "bin/cdk" } }, "sha512-jHuShSx0JI14enDz2Hk2Qe0LYTDPzLyF2nBhWCvoXyRCpz31sI3XsCh4KO5ZXKfw9ET0bHvDTVnMZQPBpswg8A=="],
+    "aws-cdk": ["aws-cdk@2.1121.0", "", { "bin": { "cdk": "bin/cdk" } }, "sha512-cG7CHt/SytYTfwrK+BUNQpqmS1dwhjt8z6ExKL6GK4n+8/6ZCwFzxlZWA/jUd2+Y9xPc+Q8cLKfMqGmgxEXbkg=="],
 
     "aws-cdk-lib": ["aws-cdk-lib@2.251.0", "", { "dependencies": { "@aws-cdk/asset-awscli-v1": "2.2.273", "@aws-cdk/asset-node-proxy-agent-v6": "^2.1.1", "@aws-cdk/cloud-assembly-api": "^2.2.2", "@aws-cdk/cloud-assembly-schema": "^53.18.0", "@balena/dockerignore": "^1.0.2", "case": "1.6.3", "fs-extra": "^11.3.3", "ignore": "^5.3.2", "jsonschema": "^1.5.0", "mime-types": "^2.1.35", "minimatch": "^10.2.3", "punycode": "^2.3.1", "semver": "^7.7.4", "table": "^6.9.0", "yaml": "1.10.3" }, "peerDependencies": { "constructs": "^10.5.0" } }, "sha512-H1Jfz2Oyejn+yG24i+By9fZpYfg+E3h1XnFCF2wnt/MyGOTIePRph7MRGkX73ap10ERSpmd0Ly58OLVykFoSQA=="],
 
