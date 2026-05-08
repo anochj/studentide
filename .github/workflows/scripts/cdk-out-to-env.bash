@@ -3,8 +3,8 @@
 set -e
 
 if [ ! -f cdk-outputs.json ]; then
-    echo "cdk-outputs.json not found."
-    exit 1
+    echo "cdk-outputs.json not found. Assuming CDK is synced. Skipping.."
+    exit 0
 fi
 
 jq -c '.IDEStack | to_entries[]' cdk-outputs.json | while read -r item; do
