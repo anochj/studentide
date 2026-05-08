@@ -47,13 +47,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           AWS_IDE_STATUS_WEBHOOK_SECRET: ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
           IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
-      
-      - name: Debug - List Files
-        run: |
-          echo "Checking for cdk-outputs.json in apps/infra..."
-          ls -la apps/infra/cdk-outputs.json || echo "File NOT found in apps/infra"
-          echo "Searching entire repo for cdk-outputs.json..."
-          find . -name "cdk-outputs.json"
     
       - name: Sync CDK outputs to Vercel env
         working-directory: apps/infra
