@@ -10,7 +10,7 @@ const clientEnvSchema = z.object({
 let parsedEnv: z.infer<typeof clientEnvSchema>;
 
 if (process.env.SKIP_ENV_VALIDATION === "true") {
-  parsedEnv = clientEnvSchema.safeParse(process.env) as unknown as z.infer<typeof clientEnvSchema>;
+  parsedEnv = process.env as unknown as z.infer<typeof clientEnvSchema>;
 } else {
   parsedEnv = clientEnvSchema.parse(process.env);
 }
