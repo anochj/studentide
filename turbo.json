@@ -5,6 +5,9 @@
     "deploy": {
       "dependsOn": ["^deploy"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": []
+    },
+    "infra#deploy": {
       "passThroughEnv": ["AWS_*"],
       "env": [
         "CDK_DEFAULT_ACCOUNT",
@@ -14,9 +17,6 @@
         "AwsIdeStatusWebhookSecret",
         "IDE_STATUS_WEBHOOK_URL"
       ],
-      "outputs": []
-    },
-    "infra#deploy": {
       "outputs": ["cdk-outputs.json"],
       "cache": false
     },
