@@ -118,6 +118,9 @@ export class IDEStack extends cdk.Stack {
 					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
 					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
 				},
+				bundling: {
+					externalModules: ["@aws-sdk/*"],
+				},
 			},
 		);
 
