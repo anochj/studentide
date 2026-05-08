@@ -14,5 +14,5 @@ jq -c '.IDEStack | to_entries[]' cdk-outputs.json | while read -r item; do
 
     # save it to vercel
     bunx vercel env rm "$ENV_NAME" production --token "${VERCEL_TOKEN}" --yes || true 
-    echo -n "$ENV_VALUE" | npx vercel env add "$ENV_NAME" production --token "${VERCEL_TOKEN}"
+    echo -n "$ENV_VALUE" | npx vercel env add "$ENV_NAME" production --token "${VERCEL_TOKEN}" plain
 done
