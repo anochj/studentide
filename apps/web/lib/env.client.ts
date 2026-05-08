@@ -14,6 +14,7 @@ if (process.env.SKIP_ENV_VALIDATION === "true") {
 } else {
   parsedEnv = clientEnvSchema.parse(process.env);
 }
+console.log("SKIP_ENV_VALIDATION:", process.env.SKIP_ENV_VALIDATION);
 
 const betterAuthUrl =
   parsedEnv.NEXT_PUBLIC_BETTER_AUTH_URL ??

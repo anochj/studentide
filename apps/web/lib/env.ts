@@ -49,6 +49,7 @@ const envSchema = z.object({
 });
 
 let parsedEnv: z.infer<typeof envSchema>;
+console.log("SKIP_ENV_VALIDATION:", process.env.SKIP_ENV_VALIDATION);
 
 if (process.env.SKIP_ENV_VALIDATION === "true") {
   parsedEnv = envSchema.safeParse(process.env) as unknown as z.infer<typeof envSchema>;
