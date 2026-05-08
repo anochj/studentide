@@ -58,6 +58,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Vercel Deployment
+        working-directory: apps/web
         run: |
           bunx vercel pull --yes --environment=production
           bunx vercel build --prod
