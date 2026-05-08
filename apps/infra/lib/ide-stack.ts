@@ -35,7 +35,7 @@ export class IDEStack extends cdk.Stack {
 
 		const cloudflareZoneId = requiredEnv("CLOUDFLARE_ZONE_ID");
 		const cloudflareApiToken = requiredEnv("CLOUDFLARE_API_TOKEN");
-		const ideStatusWebhookSecret = requiredEnv("AwsIdeStatusWebhookSecret");
+		const ideStatusWebhookSecret = requiredEnv("AWS_IDE_STATUS_WEBHOOK_SECRET");
 		const ideStatusWebhookUrl = requiredEnv("IDE_STATUS_WEBHOOK_URL");
 
 		const ideVpc = new ec2.Vpc(this, "IdeVpc", {
