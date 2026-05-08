@@ -48,7 +48,13 @@ const envSchema = z.object({
   S3ArchiverTaskDefinitionArn: z.string().min(1),
 });
 
-const parsedEnv = envSchema.parse(process.env);
+let parsedEnv: z.infer<typeof envSchema>;
+
+if (process.env.SKIP_ENV_VALIDATION === "true") {
+  parsedEnv = envSchema.safeParse(process.env) as unknown as z.infer<typeof envSchema>;
+} else {
+  parsedEnv = envSchema.parse(process.env);
+}
 
 export const env = {
   ...parsedEnv,

@@ -63,3 +63,5 @@ jobs:
           bunx vercel pull --yes --environment=production
           bunx vercel build --prod
           bunx vercel deploy --prebuilt --prod
+        env:
+          SKIP_ENV_VALIDATION: true

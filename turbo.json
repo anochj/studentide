@@ -38,7 +38,8 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["SKIP_ENV_VALIDATION"]
     },
     "db:migrate": {
       "dependsOn": ["^db:migrate"],
