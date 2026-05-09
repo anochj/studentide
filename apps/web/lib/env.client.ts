@@ -7,14 +7,10 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_BETTER_AUTH_URL: z.url().optional(),
 });
 
-let parsedEnv: z.infer<typeof clientEnvSchema>;
-
-if (process.env.SKIP_ENV_VALIDATION === "true") {
-  parsedEnv = process.env as unknown as z.infer<typeof clientEnvSchema>;
-} else {
-  parsedEnv = clientEnvSchema.parse(process.env);
-}
-console.log("SKIP_ENV_VALIDATION:", process.env.SKIP_ENV_VALIDATION);
+const parsedEnv = clientEnvSchema.parse({
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_BETTER_AUTH_URL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
+});
 
 const betterAuthUrl =
   parsedEnv.NEXT_PUBLIC_BETTER_AUTH_URL ??
