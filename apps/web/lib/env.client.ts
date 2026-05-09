@@ -12,6 +12,8 @@ const parsedEnv = clientEnvSchema.parse({
   NEXT_PUBLIC_BETTER_AUTH_URL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
 });
 
+console.log("Client Url", process.env.BETTER_AUTH_URL, process.env.NEXT_PUBLIC_BETTER_AUTH_URL);
+
 const betterAuthUrl =
   parsedEnv.NEXT_PUBLIC_BETTER_AUTH_URL ??
   (parsedEnv.NODE_ENV === "development" ? "http://localhost:3000" : undefined);

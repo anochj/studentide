@@ -57,7 +57,7 @@ if (process.env.SKIP_ENV_VALIDATION === "true") {
   parsedEnv = envSchema.parse(process.env);
 }
 
-console.log("Url", process.env.BETTER_AUTH_URL, process.env.NEXT_PUBLIC_BETTER_AUTH_URL);
+console.log("Server Url", process.env.BETTER_AUTH_URL, process.env.NEXT_PUBLIC_BETTER_AUTH_URL);
 
 export const env = {
   ...parsedEnv,
