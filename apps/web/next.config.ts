@@ -19,9 +19,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  turbopack: {
-    root: workspaceRoot,
-  },
+  // turbopack: {
+  //   root: workspaceRoot,
+  // },
   typescript: {
     ignoreBuildErrors: true,
   },
