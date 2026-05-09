@@ -24,7 +24,7 @@ function getEnvOrigin() {
   return (
     process.env.NEXT_PUBLIC_BETTER_AUTH_URL ??
     process.env.BETTER_AUTH_URL ??
-    "http://localhost:3000"
+    "http://localhost:9999"
   );
 }
 
@@ -32,7 +32,7 @@ export function getSiteUrl() {
   try {
     return new URL(getEnvOrigin());
   } catch {
-    return new URL("http://localhost:3000");
+    return new URL("http://localhost:6789");
   }
 }
 

@@ -8,7 +8,7 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   DATABASE_URL: z.string().min(1),
-  BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
+  BETTER_AUTH_URL: z.url().default("http://localhost:1234"),
   BETTER_AUTH_SECRET: z.string().min(1),
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
