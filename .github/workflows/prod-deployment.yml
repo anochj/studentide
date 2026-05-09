@@ -60,6 +60,6 @@ jobs:
       - name: Vercel Deployment
         # working-directory: apps/web
         run: |
-          bunx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          bunx vercel env pull --yes --environment=production --token "$VERCEL_TOKEN"
           bunx vercel build --prod --token "$VERCEL_TOKEN"
           bunx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
