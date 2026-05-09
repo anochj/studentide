@@ -69,18 +69,18 @@ function LoginPageContent() {
   };
 
   return (
-    <main className="grid grid-cols-1 lg:grid-cols-2 min-h-screen items-center">
-      <aside className="hidden lg:block relative h-screen">
+    <main className="grid grid-cols-1 lg:grid-cols-2 min-h-screen items-center w-full">
+      <aside className="hidden lg:block relative h-screen w-full">
         <Image
-          src="/images/studentide_icon_dark.png"
+          src="/images/login-side.png"
           alt="studentide logo"
           fill
-          className="object-contain p-24"
+          className="object-cover"
           priority
         />
       </aside>
 
-      <section className="h-full flex flex-col items-center justify-center px-8 py-12 lg:px-20">
+      <section className="h-full w-full flex flex-col items-center justify-center px-8 py-12 lg:px-20">
         <div className="w-full max-w-md">
           <header className="mb-8 text-center lg:text-left">
             <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>

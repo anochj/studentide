@@ -1,14 +1,16 @@
 import PublicNavbar from "@/components/public-navbar";
+import { SiteFooter } from "@/components/site-footer";
 
 export default async function DashboardLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <>
-      <PublicNavbar />
-      {children}
-    </>
-  );
+	return (
+		<>
+			<PublicNavbar />
+			{children}
+			<SiteFooter />
+		</>
+	);
 }

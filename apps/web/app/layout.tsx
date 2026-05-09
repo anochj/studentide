@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
-import { SiteFooter } from "@/components/site-footer";
 import { absoluteUrl, getSiteUrl, siteConfig } from "@/lib/seo";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -84,7 +83,6 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-satoshi">
         <Providers>
           {children}
-          <SiteFooter />
         </Providers>
       </body>
     </html>

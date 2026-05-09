@@ -7,10 +7,11 @@ import Stripe from "stripe";
 import { db } from "@/db";
 import { Plans } from "./constants/stripe-configs";
 import { env } from "./env";
-import { usernameSchema } from "./validations/signup";
+import { usernameSchema, normalizeUsername } from "./validations/signup";
 import { user } from "@/db/schema";
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
+import { normalize } from "node:path";
 
 const stripeClient = new Stripe(env.STRIPE_SECRET_KEY, {
 	apiVersion: "2026-04-22.dahlia",
@@ -20,6 +21,7 @@ export const auth = betterAuth({
 	baseURL: env.BETTER_AUTH_URL,
 	secret: env.BETTER_AUTH_SECRET,
 	trustedOrigins: ["https://studentide.com"],
+  advanced: { disableOriginCheck: true },
 	user: {
 		additionalFields: {
 			username: { type: "string", required: true },
@@ -35,14 +37,28 @@ export const auth = betterAuth({
 					});
 				}
 
-				const existingUser = await db
+				let usernameToUse = ctx.body.username;
+				const { success: isValidUsername } =
+					usernameSchema.safeParse(usernameToUse);
+				if (!isValidUsername) {
+					usernameToUse = normalizeUsername(usernameToUse);
+				}
+
+				let existingUser = await db
 					.select()
 					.from(user)
 					.where(eq(user.username, ctx.body.username));
 
-				let usernameToUse = ctx.body.username;
-				if (existingUser.length > 0) {
-					usernameToUse = `${ctx.body.username}${crypto.randomBytes(2).toString("hex")}`;
+        // ensure no overlap
+				while (existingUser.length > 0) {
+					if (existingUser.length) {
+						usernameToUse = `${ctx.body.username}${crypto.randomBytes(2).toString("hex")}`;
+					}
+
+					existingUser = await db
+						.select()
+						.from(user)
+						.where(eq(user.username, ctx.body.username));
 				}
 
 				const defaultImage = `https://api.dicebear.com/9.x/bottts/svg??name=${encodeURIComponent(

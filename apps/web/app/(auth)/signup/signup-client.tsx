@@ -64,8 +64,8 @@ function SignupPageContent() {
   };
 
   return (
-    <main className="grid grid-cols-1 lg:grid-cols-2 min-h-screen items-center">
-      <section className="h-full flex flex-col items-center justify-center px-8 py-12 lg:px-20">
+    <main className="grid grid-cols-1 lg:grid-cols-2 min-h-screen items-center w-full">
+      <section className="h-full w-full flex flex-col items-center justify-center px-8 py-12 lg:px-20">
         <div className="w-full max-w-md">
           <header className="mb-8 text-center lg:text-left">
             <h1 className="text-3xl font-bold tracking-tight">
@@ -194,12 +194,12 @@ function SignupPageContent() {
         </div>
       </section>
 
-      <aside className="hidden lg:block relative h-screen">
+      <aside className="hidden lg:block relative h-screen bg-red-500">
         <Image
-          src="/images/studentide_icon_dark.png"
+          src="/images/signup-side.png"
           alt="studentide logo"
           fill
-          className="object-contain p-24"
+          className="object-cover"
           priority
         />
       </aside>
