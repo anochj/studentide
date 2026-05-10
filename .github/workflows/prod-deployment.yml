@@ -20,12 +20,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: IDE Debug
-        working-directory: apps/ide
-        run: |
-          pwd
-          ls
-          cat ./theia-extensions/product/src/browser/overview-widget.tsx
-          exit 1
+        run: docker build --platform linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t ide:latest apps/ide
 
       - name: Configure AWS Credentials
         id: aws-login
