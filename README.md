@@ -1,159 +1,57 @@
-# Turborepo starter
+# StudentIDE
+An online workspace for everyone.
 
-This Turborepo starter is maintained by the Turborepo core team.
+## What is StudentIDE?
+StudentIDE is an online workspace for educators and students. Educators can create projects and students can complete these projects in a locked-down virtual environment.
 
-## Using this example
+StudentIDE tries replicate a natural coding environment for students, whilst giving educators the tools they need to manage their students and projects. StudentIDE is currently in early development, but you can [try it out here](https://studentide.com).
 
-Run the following command:
+## Why did I build StudentIDE?
+I built StudentIDE to solve a problem I faced as a student and educator. Teachers would assign projects, and it would often require the student to download the starter files manually, configure my IDE, switch back and forth between the project instructions and my code, renaming my submission to match what they expect. It was all so cumbersome.
+I wanted to build a tool that both benefited the educator and the student. All the educator has to do is create a simple project definition, and share it with their students. Student's can begin their project with a simple click. No hassle.
 
-```sh
-npx create-turbo@latest
-```
+Educators are not limited however, they can:
+- Choose the environment students work in (Python, Java, Node, etc.)
+- Provide starter files for students to begin with.
+- Set project instructions that students can easily access while working.
+- Block extensions in the student's IDE, to prevent distractions and cheating. (Like Cursor, or Github Copilot)
+- See submissions from students in a single place.
 
-## What's inside?
+## Technologies Used
+### General
+- **Turborepo** - A monorepo tool, used to manage the multiple packages and applications in this repository.
+- **TypeScript** - A typed superset of JavaScript, used for all applications and packages in this repository.
+- **Docker** - A containerization platform, used to run the applications in this repository in production.
+- **Bun** - A JavaScript runtime, often used as a faster alternative to Node.js, used to run the applications in this repository in development.
 
-This Turborepo includes the following packages/apps:
+### Frontend
+- **Next.js** - A fullstack react framework, I chose this for the simplicity to develop and deploy applications.
+- **Tailwind CSS** - A styling framework, also chosen for simplicity.
+- **Better Auth** - An authentication library, used to handle user authentication and management.
+- **Vercel** - A cloud platform, used to deploy the frontend application. Chosen for it's simplicity and seamless integration with Next.js.
 
-### Apps and Packages
+### Backend
+- **AWS** - A cloud platform, used to deploy the backend application. Chosen for it's wide range of services and scalability.
+- **AWS Lambda** - Used for serverless functions invoked by ECS tasks.
+- **AWS ECS Tasks** - This is where the student workspaces are run, chosen for the scalability, ease of use, and separation it provides.
+- **AWS EFS** - Ties in with ECS to provide persistent storage for student workspaces, used to store the files that students are actively working on.
+- **AWS ECR** - Used to store the Docker images for the ECS tasks, like the student's IDE environment, and others.
+- **AWS S3** - Used for storing project files, like starter files, submissions, etc.
+- **Supabase** - Used the PostgreSQL database for the backend, chosen for its simplicity and ease of use.
+- **Cloudflare DNS** - Used for DNS management, ECS tasks are registered here to allow for subdomains for student workspaces.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+I also integrated Google and Github OAuth providers for authentication, using Better Auth's built in support for these providers.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## How does it work?
+1. Project definitions are created by the educator, and stored in the database. 
+2. Educators can share the link to the project, and the students can visit the project.
+3. Students 'Launch Workspace', which creates a new ECS task for the student, and registers a subdomain for the task in Cloudflare.
+4. The student can then access their workspace through the subdomain, and work on the project.
+5. When the student is done, they can submit their work, which saves the files to S3, and the educator can view the submission.
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo build
-bun dlx turbo build
-bun exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+## Future Plans
+[x] Add support for more environment types, like PyGame, Machine Learning, Rust, etc.
+[x] Add word-level tracking changes, so educators can see how students are progressing through the project.
+[x] Add support for educators to create their own custom environment types, by providing a Dockerfile or entrypoint.sh.
+[x] Add support for educators to view the live workspace of their students, to provide better support and feedback.
+[x] Add support for educators to set up automated tests for their projects, and run these tests
