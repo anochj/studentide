@@ -12,8 +12,10 @@ import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as cdk from "aws-cdk-lib/core";
 import type { Construct } from "constructs";
+import { FileSystem } from "aws-cdk-lib";
 
 const projectRoot = path.resolve(__dirname, "../../..");
+const idePath = path.join(projectRoot, "apps/ide");
 const ideContainerPlatform = ecrAssets.Platform.LINUX_ARM64;
 const ideRuntimePlatform = {
 	operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
@@ -310,6 +312,7 @@ export class IDEStack extends cdk.Stack {
 
 			const envImage = ecs.ContainerImage.fromAsset(envPath, {
 				platform: ideContainerPlatform,
+				extraHash: FileSystem.fingerprint(idePath),
 			});
 
 			const taskDefinition = new ecs.FargateTaskDefinition(
