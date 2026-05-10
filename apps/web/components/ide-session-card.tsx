@@ -144,7 +144,7 @@ export default function IDESessionCard({
   function openIdeSession() {
     // biome-ignore lint/suspicious/noDocumentCookie: The IDE proxy expects a cookie on the shared studentide.com domain.
     document.cookie = [
-      `session_secret=${encodeURIComponent(sessionSecret)}`,
+      `sessionSecret=${encodeURIComponent(sessionSecret)}`,
       "Domain=.studentide.com",
       "Path=/",
       "SameSite=None",

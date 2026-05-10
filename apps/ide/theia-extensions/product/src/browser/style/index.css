@@ -261,6 +261,38 @@
     border-color: color-mix(in oklch, var(--studentide-brand) 65%, var(--studentide-border));
 }
 
+.studentide-assignment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 18px;
+}
+
+.studentide-assignment-submit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 4px 14px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: var(--theia-button-background, var(--studentide-brand));
+    color: var(--theia-button-foreground, #ffffff);
+    font-family: var(--studentide-font);
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.studentide-assignment-submit-button:hover {
+    background: var(--theia-button-hoverBackground, var(--studentide-brand-soft));
+}
+
+.studentide-assignment-submit-button:focus {
+    outline: 1px solid var(--theia-focusBorder, var(--studentide-brand));
+    outline-offset: 2px;
+}
+
 .studentide-assignment-overview-markdown {
     color: var(--studentide-muted);
     font-size: 0.9rem;
