@@ -1,57 +1,53 @@
 # StudentIDE
-An online workspace for everyone.
+*A scalable, cloud-based IDE and project management platform for computer science education.*
 
-## What is StudentIDE?
-StudentIDE is an online workspace for educators and students. Educators can create projects and students can complete these projects in a locked-down virtual environment.
+[Live Demo](https://studentide.com)
 
-StudentIDE tries replicate a natural coding environment for students, whilst giving educators the tools they need to manage their students and projects. StudentIDE is currently in early development, but you can [try it out here](https://studentide.com).
+## Overview
+StudentIDE is a full-stack virtual coding environment designed to eliminate local setup bottlenecks. It provides educators with robust project management tools and gives students instant access to pre-configured, locked-down virtual workspaces. 
 
-## Why did I build StudentIDE?
-I built StudentIDE to solve a problem I faced as a student and educator. Teachers would assign projects, and it would often require the student to download the starter files manually, configure my IDE, switch back and forth between the project instructions and my code, renaming my submission to match what they expect. It was all so cumbersome.
-I wanted to build a tool that both benefited the educator and the student. All the educator has to do is create a simple project definition, and share it with their students. Student's can begin their project with a simple click. No hassle.
+## The Problem & The Solution
+**The Problem:** Traditional coding assignments require students to manually download starter files, configure their local IDEs, manage dependencies, and adhere to strict file-naming conventions. This leads to "environment fatigue" and wastes valuable instructional time.
 
-Educators are not limited however, they can:
-- Choose the environment students work in (Python, Java, Node, etc.)
-- Provide starter files for students to begin with.
-- Set project instructions that students can easily access while working.
-- Block extensions in the student's IDE, to prevent distractions and cheating. (Like Cursor, or Github Copilot)
-- See submissions from students in a single place.
+**The Solution:** I built StudentIDE to abstract away environment configuration. Educators create a single project definition, and students launch a fully configured, containerized development environment with a single click.
 
-## Technologies Used
-### General
-- **Turborepo** - A monorepo tool, used to manage the multiple packages and applications in this repository.
-- **TypeScript** - A typed superset of JavaScript, used for all applications and packages in this repository.
-- **Docker** - A containerization platform, used to run the applications in this repository in production.
-- **Bun** - A JavaScript runtime, often used as a faster alternative to Node.js, used to run the applications in this repository in development.
+**Key Features for Educators:**
+- **Custom Environments:** Provision workspaces in Python, Java, Node.js, and more.
+- **Seamless Distribution:** Distribute starter files and project instructions directly within the workspace.
+- **Integrity Controls:** Restrict IDE extensions (e.g., GitHub Copilot, Cursor) to prevent unauthorized assistance.
+- **Centralized Dashboard:** Collect and review all student submissions in one place.
+
+## Technical Stack & Architecture
+
+### Core & Infrastructure
+- **AWS ECS (Elastic Container Service):** Orchestrates isolated, scalable student workspaces.
+- **AWS ECR & EFS:** ECR manages the custom Docker images for the IDE environments, while EFS provides persistent, attached storage for active student sessions.
+- **AWS S3:** Handles secure cloud storage for starter files and final project submissions.
+- **AWS Lambda:** Executes event-driven, serverless backend functions.
+- **Cloudflare DNS:** Dynamically registers and manages subdomains for active ECS tasks, routing students to their specific workspaces.
+- **Docker:** Containerizes the core applications and student environments.
 
 ### Frontend
-- **Next.js** - A fullstack react framework, I chose this for the simplicity to develop and deploy applications.
-- **Tailwind CSS** - A styling framework, also chosen for simplicity.
-- **Better Auth** - An authentication library, used to handle user authentication and management.
-- **Vercel** - A cloud platform, used to deploy the frontend application. Chosen for it's simplicity and seamless integration with Next.js.
+- **Next.js & React:** Powers a fast, server-side rendered user interface.
+- **Tailwind CSS:** Delivers a responsive, highly customizable styling system.
+- **Vercel:** Manages the CI/CD pipeline and global edge deployment for the frontend.
 
-### Backend
-- **AWS** - A cloud platform, used to deploy the backend application. Chosen for it's wide range of services and scalability.
-- **AWS Lambda** - Used for serverless functions invoked by ECS tasks.
-- **AWS ECS Tasks** - This is where the student workspaces are run, chosen for the scalability, ease of use, and separation it provides.
-- **AWS EFS** - Ties in with ECS to provide persistent storage for student workspaces, used to store the files that students are actively working on.
-- **AWS ECR** - Used to store the Docker images for the ECS tasks, like the student's IDE environment, and others.
-- **AWS S3** - Used for storing project files, like starter files, submissions, etc.
-- **Supabase** - Used the PostgreSQL database for the backend, chosen for its simplicity and ease of use.
-- **Cloudflare DNS** - Used for DNS management, ECS tasks are registered here to allow for subdomains for student workspaces.
+### Backend & Tooling
+- **Supabase (PostgreSQL):** Relational database managing users, project metadata, and session state.
+- **Better Auth:** Handles secure authentication, including Google and GitHub OAuth integrations.
+- **Turborepo:** Optimizes the monorepo structure, managing dependencies and build pipelines across multiple packages.
+- **TypeScript & Bun:** Ensures end-to-end type safety across the stack, utilizing Bun for rapid local development execution.
 
-I also integrated Google and Github OAuth providers for authentication, using Better Auth's built in support for these providers.
+## System Workflow
+1. **Provisioning:** An educator creates a project definition, which is serialized and stored in Supabase.
+2. **Distribution:** The platform generates a unique project link to share with students.
+3. **Execution:** Upon clicking "Launch Workspace," the backend triggers an AWS ECS task. Cloudflare dynamically registers a unique subdomain routed to this specific container.
+4. **Development:** The student accesses their isolated, browser-based IDE via the generated subdomain.
+5. **Submission:** Upon completion, the workspace state and files are securely packaged and uploaded to AWS S3 for educator review.
 
-## How does it work?
-1. Project definitions are created by the educator, and stored in the database. 
-2. Educators can share the link to the project, and the students can visit the project.
-3. Students 'Launch Workspace', which creates a new ECS task for the student, and registers a subdomain for the task in Cloudflare.
-4. The student can then access their workspace through the subdomain, and work on the project.
-5. When the student is done, they can submit their work, which saves the files to S3, and the educator can view the submission.
-
-## Future Plans
-[x] Add support for more environment types, like PyGame, Machine Learning, Rust, etc.
-[x] Add word-level tracking changes, so educators can see how students are progressing through the project.
-[x] Add support for educators to create their own custom environment types, by providing a Dockerfile or entrypoint.sh.
-[x] Add support for educators to view the live workspace of their students, to provide better support and feedback.
-[x] Add support for educators to set up automated tests for their projects, and run these tests
+## Product Roadmap
+- [ ] **Expanded Runtimes:** Add support for PyGame, Rust, and Machine Learning environments.
+- [ ] **Custom Dockerfiles:** Allow educators to define bespoke environments via custom `Dockerfile` or `entrypoint.sh` uploads.
+- [ ] **Real-Time Auditing:** Implement word-level keystroke tracking to help educators visualize student progress and verify academic integrity.
+- [ ] **Live Collaboration:** Enable educators to drop into active student workspaces for real-time support and feedback.
+- [ ] **Automated CI/CD Grading:** Allow educators to define automated test suites that run against student submissions upon completion.

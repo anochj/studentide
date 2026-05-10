@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { getUserProjectDefinitions } from "@/actions";
+import { DashboardPageSkeleton } from "@/components/dashboard-skeletons";
 import { createPageMetadata } from "@/lib/seo";
 import ProjectDefinitionsClient from "./project-definitions-client";
 
@@ -9,6 +12,16 @@ export const metadata: Metadata = createPageMetadata({
   noIndex: true,
 });
 
+async function ProjectDefinitionsContent() {
+  const initialResult = await getUserProjectDefinitions();
+
+  return <ProjectDefinitionsClient initialResult={initialResult} />;
+}
+
 export default function ProjectDefinitionsPage() {
-  return <ProjectDefinitionsClient />;
+  return (
+    <Suspense fallback={<DashboardPageSkeleton action />}>
+      <ProjectDefinitionsContent />
+    </Suspense>
+  );
 }

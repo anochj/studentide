@@ -64,6 +64,13 @@
       "when": 1778008632266,
       "tag": "0008_talented_pepper_potts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778376724868,
+      "tag": "0009_chief_vector",
+      "breakpoints": true
     }
   ]
 }

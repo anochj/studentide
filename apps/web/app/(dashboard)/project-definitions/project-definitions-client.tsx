@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, FolderPlus } from "lucide-react";
 import Link from "next/link";
 import { getUserProjectDefinitions } from "@/actions";
+import { DashboardCardGridSkeleton } from "@/components/dashboard-skeletons";
 import { ProjectCard } from "@/components/project-card";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,17 +16,37 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-export default function ProjectsPage() {
+type ProjectDefinitionsResult = Awaited<
+  ReturnType<typeof getUserProjectDefinitions>
+>;
+
+export default function ProjectsPage({
+  initialResult,
+}: {
+  initialResult?: ProjectDefinitionsResult;
+}) {
   const projectDefinitionsMutation = useQuery({
     queryKey: ["project-definitions"],
     queryFn: async () => {
       return await getUserProjectDefinitions();
     },
+    initialData: initialResult,
   });
 
   const result = projectDefinitionsMutation.data;
 
-  if (!result) return <h1>Loading...</h1>;
+  if (!result) {
+    return (
+      <main className="flex h-full flex-col flex-1 min-h-0 p-6">
+        <div className="flex-none flex justify-between items-start pb-4 mb-4 border-b">
+          <h1 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0 font-satoshi">
+            Project Definitions
+          </h1>
+        </div>
+        <DashboardCardGridSkeleton />
+      </main>
+    );
+  }
 
   if (result.serverError || result.validationErrors || !result.data?.success) {
     return (
@@ -71,8 +92,9 @@ export default function ProjectsPage() {
                   href={`/project/${project.slug}`}
                   name={project.name}
                   description={
-                    `${project.description} • ${environment.description}` ||
-                    "No description provided"
+                    project.description
+                      ? `${project.description} • ${environment.description}`
+                      : environment.description
                   }
                   visibility={project.access}
                   environment_name={environment.name}
