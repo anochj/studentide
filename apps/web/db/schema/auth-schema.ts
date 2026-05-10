@@ -19,7 +19,7 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  username: text("username").unique().notNull(),
+  username: text("username").notNull().unique(),
   displayUsername: text("display_username"),
   stripeCustomerId: text("stripe_customer_id"),
 });

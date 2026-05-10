@@ -3,4 +3,9 @@ import * as cdk from "aws-cdk-lib/core";
 import { IDEStack } from "../lib/ide-stack";
 
 const app = new cdk.App();
-new IDEStack(app, "IDEStack");
+new IDEStack(app, "IDEStack", {
+	env: {
+		account: process.env.CDK_DEFAULT_ACCOUNT,
+		region: process.env.CDK_DEFAULT_REGION,
+	},
+});

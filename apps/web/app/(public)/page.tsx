@@ -16,6 +16,7 @@ import {
   Send,
   TerminalSquare,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,13 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
+import { absoluteUrl, jsonLdScript, siteConfig } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: absoluteUrl("/"),
+  },
+};
 
 const workflow = [
   {
@@ -106,8 +114,19 @@ const marketplaceSkills = [
 ];
 
 export default function Home() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: siteConfig.name,
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    url: absoluteUrl("/"),
+    description: siteConfig.description,
+  };
+
   return (
     <main className="min-h-dvh overflow-hidden">
+      <script type="application/ld+json">{jsonLdScript(jsonLd).__html}</script>
       <section className="section-container grid min-h-[calc(100dvh-4rem)] items-center gap-12 py-16 lg:grid-cols-[1fr_0.88fr] lg:py-20">
         <div className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-md border border-mint/25 bg-mint/10 px-2.5 py-1 text-xs font-medium text-mint">

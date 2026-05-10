@@ -97,7 +97,7 @@ async function registerS3ArchiverTaskDefinition(input: {
         {
           name: STUDENT_WORKSPACE_VOLUME_NAME,
           efsVolumeConfiguration: {
-            fileSystemId: env.EFS_FILESYSTEM_ID,
+            fileSystemId: env.EfsFilesystemId,
             transitEncryption: "ENABLED",
             authorizationConfig: {
               accessPointId: input.accessPointId,
@@ -131,7 +131,7 @@ async function runS3ArchiverTask(input: {
   projectId: string;
   signedUrl: string;
 }) {
-  const cluster = env.ECS_CLUSTER_NAME;
+  const cluster = env.EcsClusterName;
   const runRes = await ecsClient.send(
     new ecs.RunTaskCommand({
       cluster,
@@ -140,8 +140,8 @@ async function runS3ArchiverTask(input: {
       launchType: "FARGATE",
       networkConfiguration: {
         awsvpcConfiguration: {
-          subnets: env.ECS_SUBNETS,
-          securityGroups: [env.ECS_SECURITY_GROUP],
+          subnets: env.EcsSubnets,
+          securityGroups: [env.EcsSecurityGroup],
           assignPublicIp: "ENABLED",
         },
       },
@@ -218,7 +218,7 @@ async function archiveProjectToSubmission(input: {
     ideSessionTaskDefinition,
   );
   const baseArchiverTaskDefinition = await describeTaskDefinition(
-    env.S3_ARCHIVER_TASK_DEFINITION_ARN,
+    env.S3ArchiverTaskDefinitionArn,
   );
   const archiverTaskDefinitionArn = await registerS3ArchiverTaskDefinition({
     baseTaskDefinition: baseArchiverTaskDefinition,

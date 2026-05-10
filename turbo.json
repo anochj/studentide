@@ -5,16 +5,61 @@
     "deploy": {
       "dependsOn": ["^deploy"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["cdk-outputs.json"]
+      "outputs": []
+    },
+    "infra#deploy": {
+      "passThroughEnv": ["AWS_*"],
+      "env": [
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
+        "CLOUDFLARE_ZONE_ID",
+        "CLOUDFLARE_API_TOKEN",
+        "AwsIdeStatusWebhookSecret",
+        "IDE_STATUS_WEBHOOK_URL"
+      ],
+      "outputs": ["cdk-outputs.json"],
+      "cache": false
     },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "SKIP_ENV_VALIDATION",
+        "DATABASE_URL",
+        "BETTER_AUTH_URL",
+        "NEXT_PUBLIC_BETTER_AUTH_URL",
+        "BETTER_AUTH_SECRET",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "AwsRegion",
+        "AWS_S3_ENDPOINT",
+        "AwsS3AccessKeyId",
+        "AwsS3SecretAccessKey",
+        "AwsS3BucketName",
+        "AwsIdeStatusWebhookSecret",
+        "EfsFilesystemId",
+        "EFS_MOUNT_PATH",
+        "EcsClusterName",
+        "EcsSubnets",
+        "EcsSecurityGroup",
+        "S3ArchiverTaskDefinitionArn"
+      ]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["SKIP_ENV_VALIDATION"]
+    },
+    "db:migrate": {
+      "dependsOn": ["^db:migrate"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["DATABASE_URL"],
+      "outputs": []
     }
   }
 }

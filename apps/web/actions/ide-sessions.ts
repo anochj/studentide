@@ -131,10 +131,10 @@ type IdeProvisioningConfig = {
 
 function getIdeProvisioningConfig(): IdeProvisioningConfig {
   return {
-    efsFileSystemId: env.EFS_FILESYSTEM_ID,
-    ecsClusterName: env.ECS_CLUSTER_NAME,
-    ecsSecurityGroup: env.ECS_SECURITY_GROUP,
-    ecsSubnets: env.ECS_SUBNETS,
+    efsFileSystemId: env.EfsFilesystemId,
+    ecsClusterName: env.EcsClusterName,
+    ecsSecurityGroup: env.EcsSecurityGroup,
+    ecsSubnets: env.EcsSubnets,
   };
 }
 
@@ -759,7 +759,7 @@ export const launchSubmissionIDESession = authActionClient
 async function killIdeSessionTask(taskArn: string) {
   await ecsClient.send(
     new ecs.StopTaskCommand({
-      cluster: env.ECS_CLUSTER_NAME,
+      cluster: env.EcsClusterName,
       task: taskArn,
       reason: "Stopped by user - from server",
     }),

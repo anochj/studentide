@@ -4,7 +4,6 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@aws-sdk/client-ec2": "^3.1038.0",
     "@types/bun": "latest"
   },
   "peerDependencies": {

@@ -106,6 +106,127 @@ export class IDEStack extends cdk.Stack {
 			clusterName: "ide-cluster",
 		});
 
+		const ideStartUpLambda = new nodejs.NodejsFunction(
+			this,
+			"IdeStartupFunction",
+			{
+				runtime: lambda.Runtime.NODEJS_LATEST,
+				entry: path.join(__dirname, "../src/ide-startup/index.ts"),
+				description:
+					"Lambda function to start up IDE environment on ECS. Registers to CF.",
+				environment: {
+					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
+					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
+				},
+				bundling: {
+					externalModules: ["@aws-sdk/*"],
+				},
+			},
+		);
+
+		ideStartUpLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ["ec2:DescribeNetworkInterfaces"],
+				resources: ["*"],
+			}),
+		);
+
+		new events.Rule(this, "IDEStartUp", {
+			description:
+				"EventBridge rule to trigger start up lambda when ECS tasks starts running.",
+			eventPattern: {
+				detailType: ["ECS Task State Change"],
+				source: ["aws.ecs"],
+				detail: {
+					lastStatus: ["RUNNING"],
+					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
+				},
+			},
+			targets: [new eventsTargets.LambdaFunction(ideStartUpLambda)],
+		});
+
+		const ideShutDownLambda = new nodejs.NodejsFunction(
+			this,
+			"IdeShutdownFunction",
+			{
+				runtime: lambda.Runtime.NODEJS_LATEST,
+				entry: path.join(__dirname, "../src/ide-shutdown/index.ts"),
+				description:
+					"Lambda function to shut down IDE environment on ECS. Deregisters from CF.",
+				environment: {
+					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
+					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
+				},
+			},
+		);
+
+		ideShutDownLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ["ec2:DescribeNetworkInterfaces"],
+				resources: ["*"],
+			}),
+		);
+
+		const webhookConnection = new events.Connection(this, "IdeStatusWebhook", {
+			authorization: events.Authorization.apiKey(
+				"x-webhook-secret",
+				cdk.SecretValue.unsafePlainText(ideStatusWebhookSecret),
+			),
+			description: "Connection to external REST API",
+		});
+
+		const apiDestination = new events.ApiDestination(
+			this,
+			"IdeStatusWebhookDestination",
+			{
+				connection: webhookConnection,
+				endpoint: ideStatusWebhookUrl,
+				httpMethod: events.HttpMethod.POST,
+				rateLimitPerSecond: 10,
+			},
+		);
+
+		new events.Rule(this, "IDEStatusChange", {
+			description:
+				"EventBridge rule to trigger REST endpoint when ECS tasks starts running.",
+			eventPattern: {
+				detailType: ["ECS Task State Change"],
+				source: ["aws.ecs"],
+				detail: {
+					lastStatus: ["RUNNING", "STOPPED"],
+					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
+				},
+			},
+			targets: [
+				new eventsTargets.ApiDestination(apiDestination, {
+					event: events.RuleTargetInput.fromObject({
+						cluster: events.EventField.fromPath("$.detail.clusterArn"),
+						taskArn: events.EventField.fromPath("$.detail.taskArn"),
+						status: events.EventField.fromPath("$.detail.lastStatus"),
+					}),
+				}),
+			],
+		});
+
+		new events.Rule(this, "IDEShutDown", {
+			description:
+				"EventBridge rule to trigger shut down lambda when ECS tasks starts running.",
+			eventPattern: {
+				detailType: ["ECS Task State Change"],
+				source: ["aws.ecs"],
+				detail: {
+					lastStatus: ["STOPPED"],
+					clusterArn: [ideCluster.clusterArn],
+					group: events.Match.anythingBut("family:s3-archiver"),
+				},
+			},
+			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
+		});
+
 		const ideEfs = new efs.FileSystem(this, "IdeEfs", {
 			vpc: ideVpc,
 			securityGroup: ideSg,
@@ -349,161 +470,43 @@ export class IDEStack extends cdk.Stack {
 			readOnly: false,
 		});
 
-		const ideStartUpLambda = new nodejs.NodejsFunction(
-			this,
-			"IdeStartupFunction",
-			{
-				runtime: lambda.Runtime.NODEJS_LATEST,
-				entry: path.join(__dirname, "../src/ide-startup/index.ts"),
-				description:
-					"Lambda function to start up IDE environment on ECS. Registers to CF.",
-				environment: {
-					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
-					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
-				},
-			},
-		);
-
-		ideStartUpLambda.addToRolePolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ["ec2:DescribeNetworkInterfaces"],
-				resources: ["*"],
-			}),
-		);
-
-		new events.Rule(this, "IDEStartUp", {
-			description:
-				"EventBridge rule to trigger start up lambda when ECS tasks starts running.",
-			eventPattern: {
-				detailType: ["ECS Task State Change"],
-				source: ["aws.ecs"],
-				detail: {
-					lastStatus: ["RUNNING"],
-					clusterArn: [ideCluster.clusterArn],
-					group: events.Match.anythingBut("family:s3-archiver"),
-				},
-			},
-			targets: [new eventsTargets.LambdaFunction(ideStartUpLambda)],
-		});
-
-		const ideShutDownLambda = new nodejs.NodejsFunction(
-			this,
-			"IdeShutdownFunction",
-			{
-				runtime: lambda.Runtime.NODEJS_LATEST,
-				entry: path.join(__dirname, "../src/ide-shutdown/index.ts"),
-				description:
-					"Lambda function to shut down IDE environment on ECS. Deregisters from CF.",
-				environment: {
-					CLOUDFLARE_ZONE_ID: cloudflareZoneId,
-					CLOUDFLARE_API_TOKEN: cloudflareApiToken,
-				},
-			},
-		);
-
-		ideShutDownLambda.addToRolePolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ["ec2:DescribeNetworkInterfaces"],
-				resources: ["*"],
-			}),
-		);
-
-		const webhookConnection = new events.Connection(this, "IdeStatusWebhook", {
-			authorization: events.Authorization.apiKey(
-				"x-webhook-secret",
-				cdk.SecretValue.unsafePlainText(ideStatusWebhookSecret),
-			),
-			description: "Connection to external REST API",
-		});
-
-		const apiDestination = new events.ApiDestination(
-			this,
-			"IdeStatusWebhookDestination",
-			{
-				connection: webhookConnection,
-				endpoint: ideStatusWebhookUrl,
-				httpMethod: events.HttpMethod.POST,
-				rateLimitPerSecond: 10,
-			},
-		);
-
-		new events.Rule(this, "IDEStatusChange", {
-			description:
-				"EventBridge rule to trigger REST endpoint when ECS tasks starts running.",
-			eventPattern: {
-				detailType: ["ECS Task State Change"],
-				source: ["aws.ecs"],
-				detail: {
-					lastStatus: ["RUNNING", "STOPPED"],
-					clusterArn: [ideCluster.clusterArn],
-					group: events.Match.anythingBut("family:s3-archiver"),
-				},
-			},
-			targets: [
-				new eventsTargets.ApiDestination(apiDestination, {
-					event: events.RuleTargetInput.fromObject({
-						cluster: events.EventField.fromPath("$.detail.clusterArn"),
-						taskArn: events.EventField.fromPath("$.detail.taskArn"),
-						status: events.EventField.fromPath("$.detail.lastStatus"),
-					}),
-				}),
-			],
-		});
-
-		new events.Rule(this, "IDEShutDown", {
-			description:
-				"EventBridge rule to trigger shut down lambda when ECS tasks starts running.",
-			eventPattern: {
-				detailType: ["ECS Task State Change"],
-				source: ["aws.ecs"],
-				detail: {
-					lastStatus: ["STOPPED"],
-					clusterArn: [ideCluster.clusterArn],
-					group: events.Match.anythingBut("family:s3-archiver"),
-				},
-			},
-			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
-		});
-
-		new cdk.CfnOutput(this, "AWS_REGION", {
+		new cdk.CfnOutput(this, "AwsRegion", {
 			value: this.region,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_BUCKET_NAME", {
+		new cdk.CfnOutput(this, "AwsS3BucketName", {
 			value: starterFileBucket.bucketName,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_ACCESS_KEY_ID", {
+		new cdk.CfnOutput(this, "AwsS3AccessKeyId", {
 			value: backendAccessKey.ref,
 		});
 
-		new cdk.CfnOutput(this, "AWS_S3_SECRET_ACCESS_KEY", {
+		new cdk.CfnOutput(this, "AwsS3SecretAccessKey", {
 			value: backendAccessKey.attrSecretAccessKey,
 		});
 
-		new cdk.CfnOutput(this, "AWS_IDE_STATUS_WEBHOOK_SECRET", {
+		new cdk.CfnOutput(this, "AwsIdeStatusWebhookSecret", {
 			value: ideStatusWebhookSecret,
 		});
 
-		new cdk.CfnOutput(this, "EFS_FILESYSTEM_ID", {
+		new cdk.CfnOutput(this, "EfsFilesystemId", {
 			value: ideEfs.fileSystemId,
 		});
 
-		new cdk.CfnOutput(this, "ECS_CLUSTER_NAME", {
+		new cdk.CfnOutput(this, "EcsClusterName", {
 			value: ideCluster.clusterName,
 		});
 
-		new cdk.CfnOutput(this, "ECS_SUBNETS", {
+		new cdk.CfnOutput(this, "EcsSubnets", {
 			value: ideVpc.publicSubnets.map((s) => s.subnetId).join(","),
 		});
 
-		new cdk.CfnOutput(this, "ECS_SECURITY_GROUP", {
+		new cdk.CfnOutput(this, "EcsSecurityGroup", {
 			value: ideSg.securityGroupId,
 		});
 
-		new cdk.CfnOutput(this, "S3_ARCHIVER_TASK_DEFINITION_ARN", {
+		new cdk.CfnOutput(this, "S3ArchiverTaskDefinitionArn", {
 			value: archiverDefinition.taskDefinitionArn,
 		});
 	}

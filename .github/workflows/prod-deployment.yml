@@ -1,9 +1,15 @@
 name: Production Deployment
-on: [push]
+on: 
+  push:
+    branches:
+      - main
+
 jobs:
   Production-Deployment:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      id-token: write
+      contents: read
     env: 
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -14,30 +20,46 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        id: aws-login
+        uses: aws-actions/configure-aws-credentials@v6
         with:
             role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-            aws-region: us-east-1
+            aws-region: us-east-2
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Dependencies 
-        run: bun install
+        run: bun install --filter "!./apps/ide"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
 
       - name: Deploy Infra 
-        run: turbo deploy
+        run: bunx turbo deploy
+        env:
+          AwsRegion: us-east-2
+          CDK_DEFAULT_REGION: us-east-2
+          CDK_DEFAULT_ACCOUNT: ${{ steps.aws-login.outputs.aws-account-id }}
+          
+          # Your existing secrets
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AWS_IDE_STATUS_WEBHOOK_SECRET: ${{ secrets.AWS_IDE_STATUS_WEBHOOK_SECRET }}
+          IDE_STATUS_WEBHOOK_URL: ${{ secrets.IDE_STATUS_WEBHOOK_URL }}
     
       - name: Sync CDK outputs to Vercel env
         working-directory: apps/infra
         run: bash ../../.github/workflows/scripts/cdk-out-to-env.bash
 
       - name: Run Database Migrations
-        run: turbo db:migrate
+        run: bunx turbo db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Vercel Deployment
+        # working-directory: apps/web
         run: |
-          bunx vercel pull --yes --environment=production --token ${{ secrets.VERCEL_TOKEN }}
-          bunx vercel build --prod --token ${{ secrets.VERCEL_TOKEN }}
-          bunx vercel deploy --prebuilt --prod --token ${{ secrets.VERCEL_TOKEN }}
+          bunx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          bunx vercel build --prod --token "$VERCEL_TOKEN"
+          bunx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"

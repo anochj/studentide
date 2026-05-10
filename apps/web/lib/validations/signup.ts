@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export function normalizeUsername(username: string) {
+	return username
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-zA-Z0-9]/g, "")
+		.slice(0, 25);
+}
+
 export const usernameSchema = z
 	.string()
 	.min(1, "Username is required")

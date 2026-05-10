@@ -3,8 +3,8 @@
 set -e
 
 if [ ! -f cdk-outputs.json ]; then
-    echo "cdk-outputs.json not found."
-    exit 1
+    echo "cdk-outputs.json not found. Assuming CDK is synced. Skipping.."
+    exit 0
 fi
 
 jq -c '.IDEStack | to_entries[]' cdk-outputs.json | while read -r item; do
@@ -14,5 +14,5 @@ jq -c '.IDEStack | to_entries[]' cdk-outputs.json | while read -r item; do
 
     # save it to vercel
     bunx vercel env rm "$ENV_NAME" production --token "${VERCEL_TOKEN}" --yes || true 
-    echo -n "$ENV_VALUE" | npx vercel env add "$ENV_NAME" production --token "${VERCEL_TOKEN}"
+    echo -n "$ENV_VALUE" | npx vercel env add "$ENV_NAME" production --token "${VERCEL_TOKEN}" --no-sensitive
 done
