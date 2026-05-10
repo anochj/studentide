@@ -39,7 +39,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Deploy Infra 
-        run: bunx turbo deploy
+        run: bunx turbo infra#deploy
         env:
           AwsRegion: us-east-2
           CDK_DEFAULT_REGION: us-east-2
