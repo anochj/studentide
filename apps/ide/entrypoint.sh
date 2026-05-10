@@ -22,18 +22,28 @@ chown -R 6767:6767 "$WORKSPACE_DIR"
 echo "Workspace linked to $EFS_TARGET"
 # download starter files if the directory is empty
 if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ] && [ -n "$STARTER_ZIP_URL" ]; then
-    # TODO: Problem where MacOS zip files have __MACOSX folders, so both that and the zip'd folder get moved to the workspace. Need to figure that out
-    
-
     curl -sSLf -o /opt/starter-file.zip "$STARTER_ZIP_URL" || { echo "Starter file download failed"; exit 1; }
 
-    mkdir -p /opt/starter-files
-    unzip /opt/starter-file.zip -d /opt/starter-files
-
     # move all contents in zip to project dir
-    shopt -s dotglob # include hidden files
-    mv -v /opt/starter-files/* "$WORKSPACE_DIR/"
-    shopt -u dotglob
+    mkdir -p /opt/starter-files
+    unzip -q /opt/starter-file.zip -d /opt/starter-files
+
+    # remove macOS junk
+    rm -rf /opt/starter-files/__MACOSX
+    find /opt/starter-files -name ".DS_Store" -delete
+
+    # flatten if zip contains a single top-level folder
+    shopt -s dotglob nullglob
+
+    entries=(/opt/starter-files/*)
+
+    if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+        mv "${entries[0]}"/* "$WORKSPACE_DIR/"
+    else
+        mv /opt/starter-files/* "$WORKSPACE_DIR/"
+    fi
+
+    shopt -u dotglob nullglob
 
     # clean up
     rm /opt/starter-file.zip 
