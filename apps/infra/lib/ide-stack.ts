@@ -341,6 +341,9 @@ export class IDEStack extends cdk.Stack {
 						containerPort: 3000,
 					},
 				],
+				logging: ecs.LogDrivers.awsLogs({
+					streamPrefix: "environment",
+				}),
 			});
 
 			envContainer.addMountPoints({
