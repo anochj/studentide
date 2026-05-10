@@ -7,7 +7,12 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": []
     },
+    "ide#deploy": {
+      "cache": false,
+      "outputs": []
+    },
     "infra#deploy": {
+      "dependsOn": ["^deploy"],
       "passThroughEnv": ["AWS_*"],
       "env": [
         "CDK_DEFAULT_ACCOUNT",
