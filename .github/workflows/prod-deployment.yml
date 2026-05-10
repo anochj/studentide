@@ -19,6 +19,14 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v6
 
+      - name: IDE Debug
+        working-directory: apps/ide
+        run: |
+          pwd
+          ls
+          cat ./theia-extensions/product/src/browser/overview-widget.tsx
+          exit 1
+
       - name: Configure AWS Credentials
         id: aws-login
         uses: aws-actions/configure-aws-credentials@v6
