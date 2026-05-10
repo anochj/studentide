@@ -140,6 +140,7 @@ export class IDEStack extends cdk.Stack {
 				source: ["aws.ecs"],
 				detail: {
 					lastStatus: ["RUNNING"],
+					desiredStatus: ["RUNNING"],
 					clusterArn: [ideCluster.clusterArn],
 					group: events.Match.anythingBut("family:s3-archiver"),
 				},
@@ -220,6 +221,7 @@ export class IDEStack extends cdk.Stack {
 				source: ["aws.ecs"],
 				detail: {
 					lastStatus: ["STOPPED"],
+					desiredStatus: ["STOPPED"],
 					clusterArn: [ideCluster.clusterArn],
 					group: events.Match.anythingBut("family:s3-archiver"),
 				},
