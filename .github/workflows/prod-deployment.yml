@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: IDE Debug
-        run: docker build --platform linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t ide:latest apps/ide
+        run: docker build --platform linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t new-ide:latest apps/ide
 
       - name: Configure AWS Credentials
         id: aws-login

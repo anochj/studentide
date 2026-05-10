@@ -1,6 +1,6 @@
 ARG TARGETPLATFORM=linux/arm64
 
-FROM --platform=$TARGETPLATFORM skshjakjn:latest
+FROM --platform=$TARGETPLATFORM new-ide:latest
 
 USER root
 
