@@ -358,18 +358,9 @@ function SidebarLogo({
       className={cn("flex min-w-0 items-center gap-2", className)}
       {...props}
     >
-      <div
-        aria-hidden="true"
-        className={cn(
-          "flex aspect-square size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary font-bold text-sidebar-primary-foreground text-sm",
-          iconClassName,
-        )}
-      >
-        s
-      </div>
       <Logo
         className={cn(
-          "min-w-0 truncate text-sm leading-tight group-data-[collapsible=icon]:hidden",
+          "min-w-0 truncate leading-tight group-data-[collapsible=icon]:hidden text-2xl",
           logoClassName,
         )}
         markClassName={markClassName}

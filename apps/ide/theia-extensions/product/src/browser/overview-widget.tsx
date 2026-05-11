@@ -8,14 +8,11 @@
  ********************************************************************************/
 
 import * as React from "react";
+import * as DOMPurify from "dompurify";
+import MarkdownIt from "markdown-it";
 
 import { ReactWidget, codicon } from "@theia/core/lib/browser";
 import { WindowService } from "@theia/core/lib/browser/window/window-service";
-import {
-	MarkdownRenderer,
-	MarkdownRenderResult,
-} from "@theia/core/lib/browser/markdown-rendering/markdown-renderer";
-import { MarkdownStringImpl } from "@theia/core/lib/common/markdown-rendering/markdown-string";
 import { Disposable } from "@theia/core/lib/common";
 import {
 	inject,
@@ -30,16 +27,17 @@ const ASSIGNMENT_SUBMISSIONS_URL = "https://www.studentide.com/submissions";
 
 @injectable()
 export class AssignmentOverviewWidget extends ReactWidget {
-	@inject(MarkdownRenderer)
-	protected readonly markdownRenderer: MarkdownRenderer;
-
 	@inject(AssignmentOverviewConfigService)
 	protected readonly configService: AssignmentOverviewConfigService;
 
 	@inject(WindowService)
 	protected readonly windowService: WindowService;
 
-	protected markdownRenderResult: MarkdownRenderResult | undefined;
+	protected readonly markdownIt = new MarkdownIt({
+		html: false,
+		linkify: true,
+		typographer: true,
+	});
 	protected projectOverview = "";
 	protected dueAt = "";
 
@@ -124,21 +122,14 @@ export class AssignmentOverviewWidget extends ReactWidget {
 	}
 
 	protected renderMarkdown = (container: HTMLDivElement | null): void => {
-		this.markdownRenderResult?.dispose();
-		this.markdownRenderResult = undefined;
 		if (!container || !this.shouldShowAssignmentOverview()) {
 			return;
 		}
 
-		while (container.firstChild) {
-			container.removeChild(container.firstChild);
-		}
-		const markdown = new MarkdownStringImpl(this.projectOverview, {
-			supportHtml: true,
-			isTrusted: true,
+		const html = this.markdownIt.render(this.projectOverview);
+		container.innerHTML = DOMPurify.sanitize(html, {
+			ALLOW_UNKNOWN_PROTOCOLS: true,
 		});
-		this.markdownRenderResult = this.markdownRenderer.render(markdown);
-		container.appendChild(this.markdownRenderResult.element);
 	};
 
 	protected getDueAt(): Date | undefined {
@@ -181,7 +172,6 @@ export class AssignmentOverviewWidget extends ReactWidget {
 	}
 
 	dispose(): void {
-		this.markdownRenderResult?.dispose();
 		super.dispose();
 	}
 }

@@ -339,7 +339,7 @@
     border-radius: 4px;
     background: var(--studentide-surface-2);
     color: var(--studentide-heading);
-    font-family: var(--theia-ui-font-family);
+    font-family: var(--theia-code-font-family, monospace);
     font-size: 0.85em;
 }
 
@@ -354,6 +354,7 @@
 .studentide-assignment-overview-markdown pre code {
     padding: 0;
     background: transparent;
+    white-space: pre;
 }
 
 ul.theia-aboutExtensions {

@@ -15,7 +15,7 @@ services:
       - STARTER_ZIP_URL=${STARTER_ZIP_URL:-}
       - PROJECT_OVERVIEW=${PROJECT_OVERVIEW:-# Project Overview\nThis is a simple outline. `inline code blocks`, **bold text**, and _italic text_ are supported.\n\n## Features\n- Feature 1\n- Feature 2\n\n## Getting Started\n1. Step one\n2. Step two}
       - DUE_AT=${DUE_AT:-1825400106}
-      - VSX_REGISTRY_URL=${VSX_REGISTRY_URL:-http://127.0.0.1:0}
+      - VSX_REGISTRY_URL=${VSX_REGISTRY_URL:-}
     volumes:
       # - efs-mount:/mnt/efs/
       - ./.mnt/efs/:/mnt/efs/

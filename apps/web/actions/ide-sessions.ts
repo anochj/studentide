@@ -105,7 +105,7 @@ const IDE_RUNTIME_PLATFORM = {
   operatingSystemFamily: "LINUX" as const,
   cpuArchitecture: "ARM64" as const,
 };
-const ENABLED_VSX_REGISTRY_URL = "https://open-vsx.org";
+const ENABLED_VSX_REGISTRY_URL = "";
 const DISABLED_VSX_REGISTRY_URL = "http://127.0.0.1:0";
 
 type IdeSessionIdentity = {
