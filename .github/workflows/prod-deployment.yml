@@ -19,9 +19,6 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v6
 
-      # - name: IDE Debug
-        # run: docker build --platform linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t new-ide:latest apps/ide
-
       - name: Configure AWS Credentials
         id: aws-login
         uses: aws-actions/configure-aws-credentials@v6
@@ -64,5 +61,5 @@ jobs:
         # working-directory: apps/web
         run: |
           bunx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
-          bunx vercel build --prod --token "$VERCEL_TOKEN"
+          bunx vercel build --force --prod --token "$VERCEL_TOKEN"
           bunx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
