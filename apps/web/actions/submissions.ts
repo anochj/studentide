@@ -258,6 +258,10 @@ export const submitIdeSession = authActionClient
       throw new Error("IDE session not found");
     }
 
+    if (ideSession.status === "provisioning") {
+      throw new Error("IDE session cannot be submitted while provisioning");
+    }
+
     if (!ideSession.project_id) {
       throw new Error("IDE session is missing a project");
     }

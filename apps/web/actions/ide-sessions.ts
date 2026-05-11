@@ -105,8 +105,9 @@ const IDE_RUNTIME_PLATFORM = {
   operatingSystemFamily: "LINUX" as const,
   cpuArchitecture: "ARM64" as const,
 };
-const ENABLED_VSX_REGISTRY_URL = "https://open-vsx.org";
+const ENABLED_VSX_REGISTRY_URL = "";
 const DISABLED_VSX_REGISTRY_URL = "http://127.0.0.1:0";
+const MAX_PROJECT_OVERVIEW_LENGTH = 200;
 
 type IdeSessionIdentity = {
   id: string;
@@ -348,6 +349,10 @@ function getVsxRegistryUrl(extensionStoreEnabled: boolean | null | undefined) {
     : ENABLED_VSX_REGISTRY_URL;
 }
 
+function getLimitedProjectOverview(overview: string | null | undefined) {
+  return (overview || "").slice(0, MAX_PROJECT_OVERVIEW_LENGTH);
+}
+
 async function getSignedStarterFileUrl(source: StarterFileReference) {
   const command = new GetObjectCommand({
     Bucket: source.bucket,
@@ -434,7 +439,7 @@ async function runSessionTask(input: {
             environment: jsonToEnvironmentOverride({
               PROJECT_ID: input.identity.projectId,
               IDENTIFIER: input.identity.identifier,
-              PROJECT_OVERVIEW: input.projectOverview || "",
+              PROJECT_OVERVIEW: getLimitedProjectOverview(input.projectOverview),
               DUE_AT: input.dueAt ? String(input.dueAt.getTime()) : "",
               VSX_REGISTRY_URL: getVsxRegistryUrl(input.extensionStoreEnabled),
               ...(input.starterFileUrl

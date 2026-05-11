@@ -37,6 +37,7 @@ StudentIDE is a full-stack virtual coding environment designed to eliminate loca
 - **Better Auth:** Handles secure authentication, including Google and GitHub OAuth integrations.
 - **Turborepo:** Optimizes the monorepo structure, managing dependencies and build pipelines across multiple packages.
 - **TypeScript & Bun:** Ensures end-to-end type safety across the stack, utilizing Bun for rapid local development execution.
+- **Github Actions:** For CI/CD pipeline automation, including production deployments.
 
 ## System Workflow
 1. **Provisioning:** An educator creates a project definition, which is serialized and stored in Supabase.

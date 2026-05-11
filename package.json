@@ -23,7 +23,6 @@
     "prepare": "husky"
   },
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ]
 }

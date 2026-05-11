@@ -12,8 +12,10 @@ import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as cdk from "aws-cdk-lib/core";
 import type { Construct } from "constructs";
+import { FileSystem } from "aws-cdk-lib";
 
 const projectRoot = path.resolve(__dirname, "../../..");
+const idePath = path.join(projectRoot, "apps/ide");
 const ideContainerPlatform = ecrAssets.Platform.LINUX_ARM64;
 const ideRuntimePlatform = {
 	operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
@@ -229,7 +231,7 @@ export class IDEStack extends cdk.Stack {
 			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
 		});
 
-		const ideEfs = new efs.FileSystem(this, "IdeEfs", {
+		const ideEfs = new efs.FileSystem(this, "IdeEfsV2", {
 			vpc: ideVpc,
 			securityGroup: ideSg,
 			encrypted: true,
@@ -310,6 +312,7 @@ export class IDEStack extends cdk.Stack {
 
 			const envImage = ecs.ContainerImage.fromAsset(envPath, {
 				platform: ideContainerPlatform,
+				extraHash: FileSystem.fingerprint(idePath),
 			});
 
 			const taskDefinition = new ecs.FargateTaskDefinition(
@@ -387,15 +390,24 @@ export class IDEStack extends cdk.Stack {
 				actions: [
 					"elasticfilesystem:CreateAccessPoint",
 					"elasticfilesystem:DeleteAccessPoint",
+					"elasticfilesystem:DescribeAccessPoints",
+					"elasticfilesystem:TagResource",
 				],
-				resources: [ideEfs.fileSystemArn],
+				resources: [
+					ideEfs.fileSystemArn,
+					`arn:aws:elasticfilesystem:${this.region}:${this.account}:access-point/*`,
+				],
 			}),
 		);
 
 		backendUser.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: ["ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition"],
+				actions: [
+					"ecs:RegisterTaskDefinition",
+					"ecs:DeregisterTaskDefinition",
+					"ecs:DescribeTaskDefinition",
+				],
 				resources: ["*"],
 			}),
 		);
@@ -403,7 +415,7 @@ export class IDEStack extends cdk.Stack {
 		backendUser.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: ["ecs:RunTask"],
+				actions: ["ecs:RunTask", "ecs:StopTask"],
 				resources: ["*"],
 				conditions: {
 					ArnEquals: { "ecs:cluster": ideCluster.clusterArn },

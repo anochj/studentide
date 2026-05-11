@@ -1,6 +1,6 @@
 ARG TARGETPLATFORM=linux/arm64
 
-FROM --platform=$TARGETPLATFORM ide:latest
+FROM --platform=$TARGETPLATFORM new-ide:latest
 
 USER root
 

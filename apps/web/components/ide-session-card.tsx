@@ -115,6 +115,7 @@ export default function IDESessionCard({
   const [error, setError] = useState<string | null>(null);
   const currentStatus = statusConfig[status] || statusConfig.error;
   const isSubmitted = submitted || submitAction.hasSucceeded;
+  const isProvisioning = status === "provisioning";
   const isBusy =
     stopAction.isExecuting ||
     restartAction.isExecuting ||
@@ -144,7 +145,7 @@ export default function IDESessionCard({
   function openIdeSession() {
     // biome-ignore lint/suspicious/noDocumentCookie: The IDE proxy expects a cookie on the shared studentide.com domain.
     document.cookie = [
-      `session_secret=${encodeURIComponent(sessionSecret)}`,
+      `sessionSecret=${encodeURIComponent(sessionSecret)}`,
       "Domain=.studentide.com",
       "Path=/",
       "SameSite=None",
@@ -321,7 +322,7 @@ export default function IDESessionCard({
           variant="outline"
           size="lg"
           className="gap-2 transition-colors hover:bg-primary hover:text-primary-foreground"
-          disabled={isSubmitted || isBusy}
+          disabled={isSubmitted || isBusy || isProvisioning}
           onClick={() =>
             handleAction(() => submitAction.executeAsync({ ideSessionId: id }))
           }
