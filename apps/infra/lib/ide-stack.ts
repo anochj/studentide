@@ -231,7 +231,7 @@ export class IDEStack extends cdk.Stack {
 			targets: [new eventsTargets.LambdaFunction(ideShutDownLambda)],
 		});
 
-		const ideEfs = new efs.FileSystem(this, "IdeEfs", {
+		const ideEfs = new efs.FileSystem(this, "IdeEfsV2", {
 			vpc: ideVpc,
 			securityGroup: ideSg,
 			encrypted: true,
