@@ -415,7 +415,7 @@ export class IDEStack extends cdk.Stack {
 		backendUser.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: ["ecs:RunTask"],
+				actions: ["ecs:RunTask", "ecs:StopTask"],
 				resources: ["*"],
 				conditions: {
 					ArnEquals: { "ecs:cluster": ideCluster.clusterArn },
