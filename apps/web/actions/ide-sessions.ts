@@ -107,7 +107,7 @@ const IDE_RUNTIME_PLATFORM = {
 };
 const ENABLED_VSX_REGISTRY_URL = "";
 const DISABLED_VSX_REGISTRY_URL = "http://127.0.0.1:0";
-const MAX_PROJECT_OVERVIEW_LENGTH = 8000;
+const MAX_PROJECT_OVERVIEW_LENGTH = 200;
 
 type IdeSessionIdentity = {
   id: string;
