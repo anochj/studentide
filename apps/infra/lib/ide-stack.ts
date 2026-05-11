@@ -390,15 +390,24 @@ export class IDEStack extends cdk.Stack {
 				actions: [
 					"elasticfilesystem:CreateAccessPoint",
 					"elasticfilesystem:DeleteAccessPoint",
+					"elasticfilesystem:DescribeAccessPoints",
+					"elasticfilesystem:TagResource",
 				],
-				resources: [ideEfs.fileSystemArn],
+				resources: [
+					ideEfs.fileSystemArn,
+					`arn:aws:elasticfilesystem:${this.region}:${this.account}:access-point/*`,
+				],
 			}),
 		);
 
 		backendUser.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: ["ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition"],
+				actions: [
+					"ecs:RegisterTaskDefinition",
+					"ecs:DeregisterTaskDefinition",
+					"ecs:DescribeTaskDefinition",
+				],
 				resources: ["*"],
 			}),
 		);
